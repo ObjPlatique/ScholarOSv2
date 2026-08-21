@@ -1,0 +1,34 @@
+.app-shell { min-height: 100vh; }
+.sidebar { position: fixed; inset: 0 auto 0 0; z-index: 50; width: var(--sidebar-width); display: flex; flex-direction: column; background: var(--surface); border-right: 1px solid var(--border); padding: 18px 14px; }
+.brand { display: flex; align-items: center; gap: 11px; padding: 4px 8px 20px; }
+.brand-mark { width: 42px; height: 42px; flex: 0 0 42px; display: grid; place-items: center; border-radius: 11px; background: var(--primary); color: white; font-size: 21px; font-weight: 800; }
+.brand-copy { min-width: 0; flex: 1; }
+.brand-copy strong, .brand-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-copy strong { font-size: 18px; letter-spacing: -.02em; }
+.brand-copy span { margin-top: 1px; color: var(--text-muted); font-size: 10px; }
+.navigation { flex: 1; overflow: auto; padding-right: 2px; }
+.nav-section { margin: 10px 0 18px; }
+.nav-label { display: block; padding: 0 11px 7px; color: var(--text-muted); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.nav-item { width: 100%; min-height: 42px; display: flex; align-items: center; gap: 11px; padding: 9px 11px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-soft); text-align: left; font-size: 14px; font-weight: 600; transition: background .15s, color .15s; }
+.nav-item:hover { background: var(--surface-soft); color: var(--text); }
+.nav-item.active { background: var(--primary-soft); color: var(--primary); }
+.nav-icon { width: 21px; flex: 0 0 21px; display: grid; place-items: center; font-size: 17px; }
+.nav-badge { margin-left: auto; padding: 2px 6px; border-radius: 999px; background: var(--primary); color: white; font-size: 9px; font-weight: 800; }
+.sidebar-footer { display: grid; gap: 3px; border-top: 1px solid var(--border); padding-top: 12px; }
+.utility-item { width: 100%; min-height: 38px; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); text-align: left; font-size: 12px; font-weight: 600; }
+.utility-item:hover { background: var(--surface-soft); color: var(--text); }
+.utility-item.danger { color: var(--danger); }
+.main-content { min-height: 100vh; margin-left: var(--sidebar-width); }
+.top-header { height: var(--header-height); position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 28px; background: color-mix(in srgb, var(--surface) 94%, transparent); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
+.header-context { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12px; font-weight: 600; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+.header-actions { display: flex; gap: 8px; }
+.header-action, .icon-button { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-soft); padding: 7px 11px; }
+.header-action:hover, .icon-button:hover { background: var(--surface-soft); color: var(--text); }
+.page-container { max-width: 1480px; margin: 0 auto; padding: 28px; }
+.page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+.page-heading h1 { margin: 3px 0 3px; font-size: clamp(28px, 3vw, 38px); line-height: 1.15; letter-spacing: -.03em; }
+.page-heading p { margin: 0; color: var(--text-muted); font-size: 14px; }
+.eyebrow { color: var(--primary) !important; font-size: 10px !important; font-weight: 800; letter-spacing: .14em; }
+.page-heading-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.streak-pill { min-height: 40px; display: inline-flex; align-items: center; gap: 5px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text-soft); font-size: 13px; }
