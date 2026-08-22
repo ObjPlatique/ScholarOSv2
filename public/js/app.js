@@ -100,8 +100,16 @@ function renderCurrentRoute() {
 
 setInterval(() => {
   const f = getState().focus;
+  const timer = document.getElementById('focusTimer');
   if (!f?.running || !f.startedAt) return;
+
   const left = Math.max(0, f.secondsLeft - Math.floor((Date.now() - f.startedAt) / 1000));
+  if (timer) {
+    const minutes = String(Math.floor(left / 60)).padStart(2, '0');
+    const seconds = String(left % 60).padStart(2, '0');
+    timer.textContent = `${minutes}:${seconds}`;
+  }
+
   if (left <= 0) {
     setState({ focus: { ...f, running: false, startedAt: null, secondsLeft: f.minutes * 60 }, focusSessions: (getState().focusSessions || 0) + 1 });
     showToast('Hoàn thành một phiên Focus!');
