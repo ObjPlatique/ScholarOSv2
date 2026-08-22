@@ -33,7 +33,7 @@ function protectMath(text) {
   const put = value => {
     const index = slots.length;
     slots.push(value);
-    return `@@SCHOLAR_MATH_${index}@@`;
+    return `SCHOLARMATHX${index}TOKEN`;
   };
   let output = String(text || '');
   output = output.replace(/\\\[([\s\S]*?)\\\]/g, (_, value) => put(`\\[${value}\\]`));
@@ -44,7 +44,7 @@ function protectMath(text) {
 }
 
 function restoreMath(text, slots) {
-  return text.replace(/@@SCHOLAR_MATH_(\d+)@@/g, (_, index) => slots[Number(index)] || '');
+  return text.replace(/SCHOLARMATHX(\d+)TOKEN/g, (_, index) => slots[Number(index)] || '');
 }
 
 function inlineMarkdown(text) {
