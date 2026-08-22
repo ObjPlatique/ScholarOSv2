@@ -3,6 +3,133 @@ import { getState, setState } from '../core/store.js';
 const esc = (s='') => String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const uid = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
 
+let mathJaxPromise = null;
+function ensureMathJax() {
+  if (window.MathJax?.typesetPromise) return Promise.resolve(window.MathJax);
+  if (mathJaxPromise) return mathJaxPromise;
+  window.MathJax = window.MathJax || {};
+  window.MathJax.tex = {
+    ...(window.MathJax.tex || {}),
+    inlineMath: [['\\(', '\\)'], ['$', '$']],
+    displayMath: [['\\[', '\\]'], ['$$', '$$']]
+  };
+  window.MathJax.options = {
+    ...(window.MathJax.options || {}),
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  };
+  mathJaxPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+    script.async = true;
+    script.onload = () => resolve(window.MathJax);
+    script.onerror = () => reject(new Error('Không thể tải bộ render công thức toán học.'));
+    document.head.appendChild(script);
+  });
+  return mathJaxPromise;
+}
+
+function protectMath(text) {
+  const slots = [];
+  const put = value => {
+    const index = slots.length;
+    slots.push(value);
+    return `@@SCHOLAR_MATH_${index}@@`;
+  };
+  let output = String(text || '');
+  output = output.replace(/\\\[([\s\S]*?)\\\]/g, (_, value) => put(`\\[${value}\\]`));
+  output = output.replace(/\$\$([\s\S]*?)\$\$/g, (_, value) => put(`\\[${value}\\]`));
+  output = output.replace(/\\\(([\s\S]*?)\\\)/g, (_, value) => put(`\\(${value}\\)`));
+  output = output.replace(/(^|[^$])\$([^$\n]+?)\$(?!\$)/g, (_, prefix, value) => `${prefix}${put(`\\(${value}\\)`)}`);
+  return { output, slots };
+}
+
+function restoreMath(text, slots) {
+  return text.replace(/@@SCHOLAR_MATH_(\d+)@@/g, (_, index) => slots[Number(index)] || '');
+}
+
+function inlineMarkdown(text) {
+  let value = text;
+  value = value.replace(/`([^`]+)`/g, '<code>$1</code>');
+  value = value.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  value = value.replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
+  value = value.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  value = value.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+  return value;
+}
+
+function renderMarkdown(text) {
+  const safe = esc(text || '');
+  const protectedMath = protectMath(safe);
+  const lines = protectedMath.output.split(/\r?\n/);
+  const html = [];
+  let paragraph = [];
+  let listType = null;
+  let listItems = [];
+
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    html.push(`<p>${inlineMarkdown(paragraph.join('<br>'))}</p>`);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (!listType || !listItems.length) return;
+    html.push(`<${listType}>${listItems.map(item => `<li>${inlineMarkdown(item)}</li>`).join('')}</${listType}>`);
+    listType = null;
+    listItems = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    if (!line.trim()) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+    const heading = line.match(/^(#{1,4})\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      const level = Math.min(4, heading[1].length);
+      html.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+      continue;
+    }
+    if (/^\s*([-*_])(?:\s*\1){2,}\s*$/.test(line)) {
+      flushParagraph();
+      flushList();
+      html.push('<hr>');
+      continue;
+    }
+    const unordered = line.match(/^\s*[-*+]\s+(.+)$/);
+    if (unordered) {
+      flushParagraph();
+      if (listType !== 'ul') { flushList(); listType = 'ul'; }
+      listItems.push(unordered[1]);
+      continue;
+    }
+    const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+    if (ordered) {
+      flushParagraph();
+      if (listType !== 'ol') { flushList(); listType = 'ol'; }
+      listItems.push(ordered[1]);
+      continue;
+    }
+    flushList();
+    paragraph.push(line);
+  }
+  flushParagraph();
+  flushList();
+  return restoreMath(html.join(''), protectedMath.slots);
+}
+
+function renderAIText(text, target = null) {
+  const html = `<div class="ai-markdown">${renderMarkdown(text || 'Không có kết quả.')}</div>`;
+  if (target) target.innerHTML = html;
+  if (target) {
+    ensureMathJax().then(() => window.MathJax.typesetPromise([target])).catch(() => {});
+  }
+  return html;
+}
+
 function contextSnapshot() {
   const s = getState();
   return {
@@ -50,7 +177,7 @@ function shell({ title, description, icon, body }) {
 function chatMessages() {
   const messages = getState().aiChat || [];
   if (!messages.length) return `<div class="ai-empty"><div class="ai-empty-icon">✦</div><strong>Bắt đầu với Scholar AI</strong><span>Hỏi về bài học, kế hoạch, nhiệm vụ hoặc bất kỳ vấn đề học tập nào.</span><div class="ai-suggestions"><button class="chip" data-action="ai-suggest" data-prompt="Hôm nay tôi nên ưu tiên học gì?">Tôi nên học gì hôm nay?</button><button class="chip" data-action="ai-suggest" data-prompt="Hãy giúp tôi lập kế hoạch ôn tập cho tuần này.">Lập kế hoạch tuần</button><button class="chip" data-action="ai-suggest" data-prompt="Giải thích cho tôi cách học một chủ đề khó hiệu quả.">Cách học chủ đề khó</button></div></div>`;
-  return messages.map(m => `<div class="ai-message ${m.role === 'user' ? 'user' : 'assistant'}"><div class="ai-message-label">${m.role === 'user' ? 'Bạn' : 'Scholar AI'}</div><div class="ai-message-body">${esc(m.content).replace(/\n/g,'<br>')}</div></div>`).join('');
+  return messages.map(m => `<div class="ai-message ${m.role === 'user' ? 'user' : 'assistant'}"><div class="ai-message-label">${m.role === 'user' ? 'Bạn' : 'Scholar AI'}</div><div class="ai-message-body">${renderMarkdown(m.content)}</div></div>`).join('');
 }
 
 export function aiChat() {
@@ -163,9 +290,11 @@ async function sendChat(prompt) {
   } catch (err) {
     saveChat('assistant', `Không thể kết nối Scholar AI: ${err.message}`);
   }
-  // Re-render current route without adding a history entry.
   const box2 = document.getElementById('aiMessages'); if (box2) box2.innerHTML = chatMessages();
-  box2?.scrollTo({ top: box2.scrollHeight, behavior: 'smooth' });
+  if (box2) {
+    try { await ensureMathJax(); await window.MathJax.typesetPromise([box2]); } catch {}
+    box2.scrollTo({ top: box2.scrollHeight, behavior: 'smooth' });
+  }
 }
 
 async function runStudyAction(action, button) {
@@ -178,7 +307,11 @@ async function runStudyAction(action, button) {
       ? `Giải thích dễ hiểu cho học sinh Việt Nam về môn ${subject}, chủ đề: ${topic}. Trình bày theo cấu trúc: ý chính, giải thích từng bước, ví dụ ngắn, lỗi thường gặp, 3 câu tự kiểm tra.`
       : `Tạo chiến lược ôn tập thực tế cho môn ${subject}, chủ đề: ${topic}. Tôi muốn biết nên học theo thứ tự nào, mỗi phiên nên làm gì, cách tự kiểm tra và cách ôn lại sau 1/3/7 ngày.`;
     const data = await postJSON('/api/ai', { prompt, context: contextSnapshot() });
-    setResult('aiStudyResult', `<div class="ai-result"><div class="result-heading"><span class="tag">Scholar AI</span><h3>${action === 'ai-explain' ? 'Giải thích' : 'Chiến lược ôn tập'}</h3></div><div class="result-text">${esc(data.text || 'Không có kết quả.').replace(/\n/g,'<br>')}</div></div>`);
+    const result = document.getElementById('aiStudyResult');
+    if (result) {
+      result.innerHTML = `<div class="ai-result"><div class="result-heading"><span class="tag">Scholar AI</span><h3>${action === 'ai-explain' ? 'Giải thích' : 'Chiến lược ôn tập'}</h3></div><div class="result-text"></div></div>`;
+      renderAIText(data.text || 'Không có kết quả.', result.querySelector('.result-text'));
+    }
   } catch (err) {
     setResult('aiStudyResult', `<div class="empty-state"><strong>Không thể hoàn thành yêu cầu</strong>${esc(err.message)}</div>`);
   } finally { setBusy(button, false); }
@@ -207,7 +340,6 @@ async function runPlanner(button) {
   finally { setBusy(button, false); }
 }
 
-// Quiz answers are handled by the global event delegate.
 window.__scholarQuizAnswer = (button) => {
   const index = Number(button.dataset.question); const option = button.dataset.option; const q = window.__scholarQuiz?.[index];
   if (!q) return;
