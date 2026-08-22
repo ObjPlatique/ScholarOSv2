@@ -189,7 +189,7 @@ async function runQuiz(button) {
   if (!topic) { setResult('aiStudyResult', `<div class="empty-state"><strong>Thiếu chủ đề</strong>Hãy nhập chủ đề quiz.</div>`); return; }
   setBusy(button, true, 'Đang tạo quiz…');
   try {
-    const data = await postJSON('/api/ai/quiz', { topic, subject: document.getElementById('quizSubject')?.value.trim(), difficulty: document.getElementById('quizDifficulty')?.value, count: Number(document.getElementById('quizCount')?.value || 5) });
+    const data = await postJSON('/api/quiz', { topic, subject: document.getElementById('quizSubject')?.value.trim(), difficulty: document.getElementById('quizDifficulty')?.value, count: Number(document.getElementById('quizCount')?.value || 5) });
     const questions = data.questions || [];
     setResult('aiStudyResult', `<div class="quiz-result"><div class="result-heading"><span class="tag">${esc(data.title || 'Quiz')}</span><h3>${questions.length} câu hỏi</h3></div>${questions.map((q,i)=>`<article class="quiz-question"><strong>${i+1}. ${esc(q.question)}</strong><div class="quiz-options">${(q.options||[]).map((o,j)=>`<button class="quiz-option" data-action="quiz-answer" data-question="${i}" data-option="${String.fromCharCode(65+j)}">${String.fromCharCode(65+j)}. ${esc(o)}</button>`).join('')}</div><div class="quiz-explanation" id="quiz-exp-${i}" hidden>Đáp án: <strong>${esc(q.answer || '')}</strong><br>${esc(q.explanation || '')}</div></article>`).join('')}<div class="muted">Quiz này chỉ hiển thị đáp án sau khi bạn chọn.</div></div>`);
     window.__scholarQuiz = questions;
@@ -200,7 +200,7 @@ async function runQuiz(button) {
 async function runPlanner(button) {
   setBusy(button, true, 'Đang phân tích…');
   try {
-    const data = await postJSON('/api/ai/schedule', { context: contextSnapshot() });
+    const data = await postJSON('/api/schedule', { context: contextSnapshot() });
     const blocks = data.blocks || [];
     setResult('aiPlannerResult', `<div class="planner-result"><div class="result-heading"><span class="tag">AI đề xuất</span><h3>${esc(data.summary || 'Kế hoạch đề xuất')}</h3></div>${data.warnings?.length ? `<div class="warning-box"><strong>Lưu ý</strong>${data.warnings.map(x=>`<div>• ${esc(x)}</div>`).join('')}</div>` : ''}<div class="planner-blocks">${blocks.length ? blocks.map(b=>`<div class="planner-block"><div><strong>${esc(b.title)}</strong><span>${esc(b.day || '')} · ${esc(b.start || '')}–${esc(b.end || '')}</span></div><p>${esc(b.reason || '')}</p></div>`).join('') : '<div class="empty-state"><strong>AI không tạo được block</strong>Hãy bổ sung deadline hoặc thời gian cố định.</div>'}</div><p class="muted">Đây là đề xuất. ScholarOS chưa thay đổi thời gian biểu của bạn.</p></div>`);
   } catch (err) { setResult('aiPlannerResult', `<div class="empty-state"><strong>Không thể lập đề xuất</strong>${esc(err.message)}</div>`); }
