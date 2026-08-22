@@ -1,0 +1,45 @@
+name: One-time Scholar Math render fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message != 'Fix Scholar Math placeholder'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Replace Markdown-sensitive math placeholders
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('public/js/features/ai.js')
+          text = path.read_text(encoding='utf-8')
+          old_put = 'return `@@SCHOLAR_MATH_${index}@@`;'
+          new_put = 'return `SCHOLARMATHX${index}TOKEN`;'
+          old_restore = "return text.replace(/@@SCHOLAR_MATH_(\\d+)@@/g, (_, index) => slots[Number(index)] || '');"
+          new_restore = "return text.replace(/SCHOLARMATHX(\\d+)TOKEN/g, (_, index) => slots[Number(index)] || '');"
+          if old_put not in text or old_restore not in text:
+              raise SystemExit('Expected math placeholder code was not found; refusing to modify the file.')
+          text = text.replace(old_put, new_put, 1).replace(old_restore, new_restore, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit fix and remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/one-time-math-render-fix.yml
+          git add public/js/features/ai.js .github/workflows/one-time-math-render-fix.yml
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Fix Scholar Math placeholder"
+          git push
