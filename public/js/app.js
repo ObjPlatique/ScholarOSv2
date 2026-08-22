@@ -4,7 +4,7 @@ import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
 import { tasks, schedule, focus, habits, goals, progress, handleToolAction } from './features/tools.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
-import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js';
+import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=20260822-render-v1';
 
 const routes = {
   dashboard,
@@ -58,8 +58,6 @@ function importData(event) {
 
 const appView = document.getElementById('appView');
 
-// Route navigation is handled only by explicit route controls.
-// Never treat clicks inside a form/textarea as navigation.
 appView.addEventListener('click', event => {
   const routeTarget = event.target.closest('[data-route]');
   if (routeTarget && appView.contains(routeTarget)) {
@@ -67,9 +65,7 @@ appView.addEventListener('click', event => {
     return;
   }
 
-  // Action controls must be actual interactive controls. This prevents a
-  // click anywhere inside a <form data-action="..."> from firing the form action.
-  const actionTarget = event.target.closest('button[data-action], [role=\"button\"][data-action]');
+  const actionTarget = event.target.closest('button[data-action], [role="button"][data-action]');
   if (!actionTarget || !appView.contains(actionTarget)) return;
 
   const action = actionTarget.dataset.action;
@@ -88,8 +84,6 @@ appView.addEventListener('click', event => {
   }
 });
 
-// Forms get their own submit handler. This is important for Scholar AI:
-// pressing Enter or clicking inside the composer must never navigate away.
 appView.addEventListener('submit', event => {
   const form = event.target.closest('form[data-action]');
   if (!form || !appView.contains(form)) return;
