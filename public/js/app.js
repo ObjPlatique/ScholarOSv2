@@ -1,8 +1,9 @@
 import { initRouter, navigate, registerRoute } from './core/router.js';
-import { getState, setState, resetState, exportState, importState } from './core/store.js';
+import { getState, resetState, exportState, importState } from './core/store.js';
 import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
-import { tasks, schedule, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { tasks, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { schedule, handleScheduleAction } from './features/schedule.js';
 import { focus, handleFocusAction, tickFocus } from './features/focus.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
 import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=20260822-render-v1';
@@ -83,6 +84,12 @@ appView.addEventListener('click', event => {
     return;
   }
 
+  if (action.startsWith('schedule-')) {
+    const result = handleScheduleAction(action, actionTarget.dataset.id, event, actionTarget);
+    if (result === 'refresh') renderCurrentRoute();
+    return;
+  }
+
   const result = handleAIAction(action, actionTarget.dataset.id, event, actionTarget)
     || handleToolAction(action, actionTarget.dataset.id, event)
     || handleResourceAction(action, actionTarget.dataset.id);
@@ -93,8 +100,15 @@ appView.addEventListener('click', event => {
 appView.addEventListener('submit', event => {
   const form = event.target.closest('form[data-action]');
   if (!form || !appView.contains(form)) return;
+  event.preventDefault();
 
   const action = form.dataset.action;
+  if (action.startsWith('schedule-')) {
+    const result = handleScheduleAction(action, form.dataset.id, event, form);
+    if (result === 'refresh') renderCurrentRoute();
+    return;
+  }
+
   const result = handleAIAction(action, form.dataset.id, event, form);
   if (result === 'refresh') renderCurrentRoute();
 });
