@@ -12,6 +12,17 @@ function formatTime(seconds) {
   return `${String(Math.floor(safe / 60)).padStart(2, '0')}:${String(safe % 60).padStart(2, '0')}`;
 }
 
+function formatDuration(seconds) {
+  const safe = Math.max(0, Math.floor(Number(seconds) || 0));
+  const h = Math.floor(safe / 3600);
+  const m = Math.floor((safe % 3600) / 60);
+  return h ? `${h}h ${m}m` : `${m} phút`;
+}
+
+function formatLogDate(value) {
+  return new Date(value).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
+}
+
 function getFocus(state = getState()) {
   const f = state.focus || {};
   const minutes = Math.max(1, Number(f.minutes) || DEFAULT_MINUTES);
@@ -139,13 +150,27 @@ export function handleFocusAction(action, target) {
   return null;
 }
 
+function renderLogRows(logs) {
+  if (!logs.length) {
+    return `<div class="empty-state"><strong>Chưa có Focus Log</strong>Hoàn thành hoặc dừng một phiên Focus để lịch sử xuất hiện ở đây.</div>`;
+  }
+  return `<div class="task-list">${logs.map(log => `<article class="list-row">
+    <div class="list-main">
+      <strong>${log.status === 'completed' ? '✓ Hoàn thành' : '○ Dừng sớm'}</strong>
+      <span>${formatLogDate(log.startedAt)} · ${formatDuration(log.actualSeconds)} / ${formatDuration(log.plannedSeconds)}</span>
+    </div>
+  </article>`).join('')}</div>`;
+}
+
 export function focus() {
   const state = getState();
   const f = getFocus(state);
   const remaining = getRemainingSeconds(f);
   const logs = state.focusLogs || [];
-  const today = new Date().toISOString().slice(0, 10);
-  const todayCompleted = logs.filter(log => log.startedAt?.slice(0, 10) === today && log.status === 'completed').length;
+  const completed = logs.filter(log => log.status === 'completed');
+  const totalSeconds = completed.reduce((sum, log) => sum + (Number(log.actualSeconds) || 0), 0);
+  const recentLogs = logs.slice(0, 10);
+
   return {
     title: 'Focus',
     description: 'Tập trung vào một việc trong một khoảng thời gian rõ ràng.',
@@ -162,42 +187,35 @@ export function focus() {
           ${PRESETS.map(minutes => `<button class="button ${f.minutes === minutes && !f.running ? 'primary' : ''}" data-action="focus-preset" data-min="${minutes}">${minutes} phút</button>`).join('')}
         </div>
       </section>
-      <section class="card">
+
+      <section class="card" id="focusLogsSection">
         <div class="module-toolbar">
-          <div><h2>Phiên hôm nay</h2><p class="muted">${todayCompleted} phiên hoàn thành.</p></div>
-          <button class="button" data-route="focus-logs">Xem Focus Logs →</button>
+          <div>
+            <span class="eyebrow">FOCUS LOGS</span>
+            <h2>Lịch sử Focus</h2>
+            <p class="muted">Theo dõi các phiên tập trung ngay trong Focus, không cần mở trang riêng.</p>
+          </div>
+        </div>
+        <div class="stat-grid">
+          <article class="card stat-card"><span>Phiên hoàn thành</span><strong>${completed.length}</strong><span>tổng cộng</span></article>
+          <article class="card stat-card"><span>Thời gian tập trung</span><strong>${formatDuration(totalSeconds)}</strong><span>từ các phiên hoàn thành</span></article>
         </div>
         <hr>
-        <p class="muted">Focus được quản lý bởi một timer engine duy nhất, nên Dashboard và Focus Logs có thể dùng chung dữ liệu.</p>
+        ${renderLogRows(recentLogs)}
       </section>
     </div>`
   };
 }
 
+// Kept for backward compatibility with old saved hashes/bookmarks. The UI no longer exposes this as a separate navigation item.
 export function focusLogs() {
   const logs = getState().focusLogs || [];
   const completed = logs.filter(log => log.status === 'completed');
   const totalSeconds = completed.reduce((sum, log) => sum + (Number(log.actualSeconds) || 0), 0);
-  const fmtDuration = seconds => {
-    const safe = Math.max(0, Math.floor(Number(seconds) || 0));
-    const h = Math.floor(safe / 3600);
-    const m = Math.floor((safe % 3600) / 60);
-    return h ? `${h}h ${m}m` : `${m} phút`;
-  };
-  const fmtDate = value => new Date(value).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' });
   return {
     title: 'Focus Logs',
     description: 'Lịch sử các phiên tập trung và thời gian học thực tế.',
-    render: () => `<div class="stat-grid">
-      <article class="card stat-card"><span>Phiên hoàn thành</span><strong>${completed.length}</strong><span>tổng cộng</span></article>
-      <article class="card stat-card"><span>Thời gian tập trung</span><strong>${fmtDuration(totalSeconds)}</strong><span>từ các phiên hoàn thành</span></article>
-    </div>
-    <div class="card">
-      <div class="module-toolbar"><div><h2 class="section-title">Lịch sử Focus</h2><p class="muted">Các phiên mới nhất được hiển thị trước.</p></div><button class="button" data-route="focus">← Quay lại Focus</button></div>
-      <div class="task-list">${logs.length ? logs.map(log => `<article class="list-row">
-        <div class="list-main"><strong>${log.status === 'completed' ? '✓ Hoàn thành' : '○ Dừng sớm'}</strong><span>${fmtDate(log.startedAt)} · ${fmtDuration(log.actualSeconds)} / ${fmtDuration(log.plannedSeconds)}</span></div>
-      </article>`).join('') : `<div class="empty-state"><strong>Chưa có Focus Log</strong>Hoàn thành hoặc dừng một phiên Focus để lịch sử xuất hiện ở đây.</div>`}</div>
-    </div>`
+    render: () => `<div class="card"><div class="module-toolbar"><div><h2>Lịch sử Focus</h2><p class="muted">Trang cũ được giữ để tránh lỗi với liên kết/hash cũ.</p></div><button class="button" data-route="focus">← Quay lại Focus</button></div><p class="muted">${completed.length} phiên hoàn thành · ${formatDuration(totalSeconds)} tập trung.</p>${renderLogRows(logs)}</div>`
   };
 }
 

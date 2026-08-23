@@ -3,7 +3,7 @@ import { getState, resetState, exportState, importState } from './core/store.js'
 import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
 import { tasks, schedule, habits, goals, progress, handleToolAction } from './features/tools.js';
-import { focus, focusLogs, handleFocusAction } from './features/focus.js';
+import { focus, handleFocusAction } from './features/focus.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
 import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=20260822-render-v1';
 
@@ -15,7 +15,6 @@ const routes = {
   schedule,
   tasks,
   focus,
-  'focus-logs': focusLogs,
   habits,
   goals,
   progress,
@@ -107,7 +106,7 @@ function renderCurrentRoute() {
 window.addEventListener('scholaros:focus-finished', event => {
   showToast(event.detail?.log?.status === 'completed' ? 'Hoàn thành một phiên Focus!' : 'Đã lưu phiên Focus.');
   const route = window.location.hash.replace(/^#\/?/, '') || 'dashboard';
-  if (route === 'focus' || route === 'focus-logs') renderCurrentRoute();
+  if (route === 'focus') renderCurrentRoute();
 });
 
 applyTheme(getState().theme);
