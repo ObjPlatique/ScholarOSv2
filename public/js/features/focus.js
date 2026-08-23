@@ -15,12 +15,14 @@ function formatTime(seconds) {
 function getFocus(state = getState()) {
   const f = state.focus || {};
   const minutes = Math.max(1, Number(f.minutes) || DEFAULT_MINUTES);
-  const baseSeconds = minutes * 60;
-  const secondsLeft = Math.max(0, Number(f.secondsLeft) || baseSeconds);
+  const plannedSeconds = minutes * 60;
+  const secondsLeft = Math.max(0, Number(f.secondsLeft) || plannedSeconds);
   return {
     minutes,
     running: Boolean(f.running),
     startedAt: Number(f.startedAt) || null,
+    sessionStartedAt: Number(f.sessionStartedAt) || null,
+    accumulatedSeconds: Math.max(0, Number(f.accumulatedSeconds) || 0),
     secondsLeft
   };
 }
@@ -30,6 +32,14 @@ export function getRemainingSeconds(focus = getFocus()) {
   return Math.max(0, focus.secondsLeft - Math.floor((Date.now() - focus.startedAt) / 1000));
 }
 
+function getActualSeconds(focus) {
+  if (!focus.sessionStartedAt) return 0;
+  const currentSegment = focus.running && focus.startedAt
+    ? Math.max(0, Math.floor((Date.now() - focus.startedAt) / 1000))
+    : 0;
+  return Math.max(0, focus.accumulatedSeconds + currentSegment);
+}
+
 function persistFocus(focus) {
   setState({ focus: { ...focus } });
 }
@@ -37,12 +47,11 @@ function persistFocus(focus) {
 function createLog(focus, status, actualSeconds) {
   const plannedSeconds = Math.max(0, Number(focus.minutes) || DEFAULT_MINUTES) * 60;
   const safeActual = Math.max(0, Math.min(plannedSeconds, Math.floor(Number(actualSeconds) || 0)));
-  const startedAt = focus.startedAt ? new Date(focus.startedAt).toISOString() : new Date().toISOString();
-  const endedAt = new Date().toISOString();
+  const startedAt = focus.sessionStartedAt || focus.startedAt || Date.now();
   return {
     id: uid(),
-    startedAt,
-    endedAt,
+    startedAt: new Date(startedAt).toISOString(),
+    endedAt: new Date().toISOString(),
     plannedSeconds,
     actualSeconds: safeActual,
     status,
@@ -54,12 +63,11 @@ function createLog(focus, status, actualSeconds) {
 function finishSession(status = 'completed') {
   const state = getState();
   const focus = getFocus(state);
-  const remaining = getRemainingSeconds(focus);
-  const actualSeconds = Math.max(0, focus.secondsLeft - remaining);
+  const actualSeconds = status === 'completed' ? focus.minutes * 60 : getActualSeconds(focus);
   const log = createLog(focus, status, actualSeconds);
   const logs = [log, ...(state.focusLogs || [])].slice(0, 500);
   setState({
-    focus: { minutes: focus.minutes, running: false, startedAt: null, secondsLeft: focus.minutes * 60 },
+    focus: { minutes: focus.minutes, running: false, startedAt: null, sessionStartedAt: null, accumulatedSeconds: 0, secondsLeft: focus.minutes * 60 },
     focusLogs: logs,
     focusSessions: (state.focusSessions || 0) + (status === 'completed' ? 1 : 0)
   });
@@ -78,29 +86,43 @@ function startFocus() {
   const focus = getFocus();
   const remaining = getRemainingSeconds(focus);
   if (remaining <= 0) {
-    persistFocus({ ...focus, running: false, startedAt: null, secondsLeft: focus.minutes * 60 });
+    persistFocus({ minutes: focus.minutes, running: false, startedAt: null, sessionStartedAt: null, accumulatedSeconds: 0, secondsLeft: focus.minutes * 60 });
     return;
   }
-  persistFocus({ ...focus, running: true, startedAt: Date.now(), secondsLeft: remaining });
+  const now = Date.now();
+  persistFocus({
+    ...focus,
+    running: true,
+    startedAt: now,
+    sessionStartedAt: focus.sessionStartedAt || now,
+    secondsLeft: remaining
+  });
 }
 
 function pauseFocus() {
   const focus = getFocus();
   const remaining = getRemainingSeconds(focus);
-  persistFocus({ ...focus, running: false, startedAt: null, secondsLeft: remaining });
+  const actual = getActualSeconds(focus);
+  persistFocus({
+    ...focus,
+    running: false,
+    startedAt: null,
+    accumulatedSeconds: actual,
+    secondsLeft: remaining
+  });
 }
 
 function resetFocus() {
   const focus = getFocus();
-  if (focus.running) finishSession('stopped');
-  else persistFocus({ minutes: focus.minutes, running: false, startedAt: null, secondsLeft: focus.minutes * 60 });
+  if (focus.sessionStartedAt && getActualSeconds(focus) > 0) finishSession('stopped');
+  else persistFocus({ minutes: focus.minutes, running: false, startedAt: null, sessionStartedAt: null, accumulatedSeconds: 0, secondsLeft: focus.minutes * 60 });
 }
 
 export function handleFocusAction(action, target) {
   if (!action) return null;
   if (action === 'focus-preset') {
     const minutes = PRESETS.includes(Number(target?.dataset?.min)) ? Number(target.dataset.min) : DEFAULT_MINUTES;
-    persistFocus({ minutes, running: false, startedAt: null, secondsLeft: minutes * 60 });
+    persistFocus({ minutes, running: false, startedAt: null, sessionStartedAt: null, accumulatedSeconds: 0, secondsLeft: minutes * 60 });
     return 'refresh';
   }
   if (action === 'focus-toggle') {
