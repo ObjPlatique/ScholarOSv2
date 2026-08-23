@@ -116,13 +116,13 @@ function renderLog(log) {
   </article>`;
 }
 
-export function handleFocusAction(action, event) {
+export function handleFocusAction(action, event, target = null) {
   const state = getState();
   const f = normalizeFocus(state.focus);
 
   if (action === 'focus-preset') {
     if (f.running) return 'ignored';
-    const minutes = Math.max(1, Number(event.currentTarget.dataset.min) || DEFAULT_MINUTES);
+    const minutes = Math.max(1, Number(target?.dataset?.min || event?.currentTarget?.dataset?.min) || DEFAULT_MINUTES);
     setState({ focus: { minutes, running: false, startedAt: null, secondsLeft: minutes * 60 } });
     return 'refresh';
   }
@@ -177,12 +177,4 @@ export function tickFocus(now = Date.now()) {
   setState({ focus: { ...f, running: false, startedAt: null, secondsLeft: 0 } });
   saveLog('completed', f.minutes, actualSeconds, f.startedAt);
   return true;
-}
-
-export function syncFocusTimer() {
-  const f = normalizeFocus(getState().focus);
-  const timer = document.getElementById('focusTimer');
-  if (timer) timer.textContent = formatTime(remainingSeconds(f));
-  const status = document.getElementById('focusTimerStatus');
-  if (status) status.textContent = f.running ? 'Đang tập trung' : 'Sẵn sàng';
 }
