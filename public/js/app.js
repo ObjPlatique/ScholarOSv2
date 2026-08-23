@@ -40,9 +40,14 @@ appView.addEventListener('click', event => {
   if (action === 'schedule-close-modal' && event.target.closest('.schedule-modal') && !event.target.closest('button[data-action="schedule-close-modal"]')) return;
   if (action === 'quiz-answer') { window.__scholarQuizAnswer?.(actionTarget); return; }
 
-  const scheduleResult = handleScheduleAction(action, actionTarget.dataset.id, event, actionTarget);
-  if (scheduleResult === 'refresh') { renderCurrentRoute(); return; }
-  if (scheduleResult !== null) return;
+  // Schedule owns every schedule-* action. Do not pass it through legacy
+  // tool/AI/resource handlers because those handlers use different semantics
+  // and the legacy tool handler refreshes unknown actions.
+  if (action?.startsWith('schedule-')) {
+    const scheduleResult = handleScheduleAction(action, actionTarget.dataset.id, event, actionTarget);
+    if (scheduleResult === 'refresh') renderCurrentRoute();
+    return;
+  }
 
   const focusResult = handleFocusAction(action, actionTarget);
   if (focusResult === 'refresh') { renderCurrentRoute(); return; }
@@ -56,9 +61,14 @@ appView.addEventListener('submit', event => {
   if (!form || !appView.contains(form)) return;
   event.preventDefault();
   const action = form.dataset.action;
-  const scheduleResult = handleScheduleAction(action, form.dataset.id, event, form);
-  if (scheduleResult === 'refresh') { renderCurrentRoute(); return; }
-  if (scheduleResult !== null) return;
+
+  // Schedule forms are handled exclusively by the Schedule module.
+  if (action?.startsWith('schedule-')) {
+    const scheduleResult = handleScheduleAction(action, form.dataset.id, event, form);
+    if (scheduleResult === 'refresh') renderCurrentRoute();
+    return;
+  }
+
   const result = handleAIAction(action, form.dataset.id, event, form);
   if (result === 'refresh') renderCurrentRoute();
 });
