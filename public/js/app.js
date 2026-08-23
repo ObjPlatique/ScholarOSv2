@@ -2,7 +2,8 @@ import { initRouter, navigate, registerRoute } from './core/router.js';
 import { getState, resetState, exportState, importState } from './core/store.js';
 import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
-import { tasks, schedule, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { tasks, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { schedule, handleScheduleAction } from './features/schedule.js';
 import { focus, focusLogs, handleFocusAction } from './features/focus.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
 import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=20260822-render-v1';
@@ -79,6 +80,12 @@ appView.addEventListener('click', event => {
 
   const focusResult = handleFocusAction(action, actionTarget);
   if (focusResult === 'refresh') {
+    renderCurrentRoute();
+    return;
+  }
+
+  const scheduleResult = handleScheduleAction(action, actionTarget.dataset.id, event);
+  if (scheduleResult === 'refresh') {
     renderCurrentRoute();
     return;
   }
