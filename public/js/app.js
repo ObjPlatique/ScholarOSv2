@@ -1,8 +1,9 @@
 import { initRouter, navigate, registerRoute } from './core/router.js';
-import { getState, setState, resetState, exportState, importState } from './core/store.js';
+import { getState, resetState, exportState, importState } from './core/store.js';
 import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
-import { tasks, schedule, focus, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { tasks, schedule, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { focus, focusLogs, handleFocusAction } from './features/focus.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
 import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=20260822-render-v1';
 
@@ -14,6 +15,7 @@ const routes = {
   schedule,
   tasks,
   focus,
+  'focus-logs': focusLogs,
   habits,
   goals,
   progress,
@@ -75,13 +77,17 @@ appView.addEventListener('click', event => {
     return;
   }
 
+  const focusResult = handleFocusAction(action, actionTarget);
+  if (focusResult === 'refresh') {
+    renderCurrentRoute();
+    return;
+  }
+
   const result = handleAIAction(action, actionTarget.dataset.id, event, actionTarget)
     || handleToolAction(action, actionTarget.dataset.id, event)
     || handleResourceAction(action, actionTarget.dataset.id);
 
-  if (result === 'refresh') {
-    renderCurrentRoute();
-  }
+  if (result === 'refresh') renderCurrentRoute();
 });
 
 appView.addEventListener('submit', event => {
@@ -98,24 +104,11 @@ function renderCurrentRoute() {
   navigate(route, { replace: true });
 }
 
-setInterval(() => {
-  const f = getState().focus;
-  const timer = document.getElementById('focusTimer');
-  if (!f?.running || !f.startedAt) return;
-
-  const left = Math.max(0, f.secondsLeft - Math.floor((Date.now() - f.startedAt) / 1000));
-  if (timer) {
-    const minutes = String(Math.floor(left / 60)).padStart(2, '0');
-    const seconds = String(left % 60).padStart(2, '0');
-    timer.textContent = `${minutes}:${seconds}`;
-  }
-
-  if (left <= 0) {
-    setState({ focus: { ...f, running: false, startedAt: null, secondsLeft: f.minutes * 60 }, focusSessions: (getState().focusSessions || 0) + 1 });
-    showToast('Hoàn thành một phiên Focus!');
-    navigate('focus');
-  }
-}, 1000);
+window.addEventListener('scholaros:focus-finished', event => {
+  showToast(event.detail?.log?.status === 'completed' ? 'Hoàn thành một phiên Focus!' : 'Đã lưu phiên Focus.');
+  const route = window.location.hash.replace(/^#\/?/, '') || 'dashboard';
+  if (route === 'focus' || route === 'focus-logs') renderCurrentRoute();
+});
 
 applyTheme(getState().theme);
 updateStreak();
