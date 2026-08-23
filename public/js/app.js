@@ -1,5 +1,5 @@
 import { initRouter, navigate, registerRoute } from './core/router.js';
-import { getState, setState, resetState, exportState, importState } from './core/store.js';
+import { getState, resetState, exportState, importState } from './core/store.js';
 import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
 import { tasks, schedule, habits, goals, progress, handleToolAction } from './features/tools.js';
@@ -79,7 +79,7 @@ appView.addEventListener('click', event => {
   }
 
   if (action.startsWith('focus-')) {
-    const result = handleFocusAction(action, event);
+    const result = handleFocusAction(action, event, actionTarget);
     if (result === 'refresh') renderCurrentRoute();
     return;
   }
