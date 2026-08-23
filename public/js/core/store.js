@@ -1,12 +1,26 @@
 const KEY = 'scholaros.v2.state';
-const defaults = { streak: 0, tasks: [], schedule: [], habits: [], goals: [], notes: [], subjects: [], materials: [], colleges: [], focus: { minutes: 25, running: false, startedAt: null, secondsLeft: 1500 }, focusSessions: 0, theme: 'light' };
+const defaults = {
+  streak: 0,
+  tasks: [],
+  schedule: [],
+  habits: [],
+  goals: [],
+  notes: [],
+  subjects: [],
+  materials: [],
+  colleges: [],
+  focus: { minutes: 25, running: false, startedAt: null, secondsLeft: 1500 },
+  focusSessions: 0,
+  focusLogs: [],
+  theme: 'light'
+};
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 
 export function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
-    return { ...clone(defaults), ...(saved || {}) };
+    return { ...clone(defaults), ...(saved || {}), focusLogs: Array.isArray(saved?.focusLogs) ? saved.focusLogs : [] };
   } catch { return clone(defaults); }
 }
 
@@ -24,7 +38,7 @@ export function resetState() { state = clone(defaults); localStorage.setItem(KEY
 export function exportState() { return JSON.stringify(state, null, 2); }
 export function importState(data) {
   if (!data || typeof data !== 'object') throw new Error('Dữ liệu không hợp lệ.');
-  state = { ...clone(defaults), ...data };
+  state = { ...clone(defaults), ...data, focusLogs: Array.isArray(data.focusLogs) ? data.focusLogs : [] };
   localStorage.setItem(KEY, JSON.stringify(state));
   listeners.forEach(fn => fn(state));
 }
