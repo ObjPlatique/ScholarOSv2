@@ -16,12 +16,14 @@ function getFocus(state = getState()) {
   const f = state.focus || {};
   const minutes = Math.max(1, Number(f.minutes) || DEFAULT_MINUTES);
   const plannedSeconds = minutes * 60;
+  const startedAt = Number(f.startedAt) || null;
+  const sessionStartedAt = Number(f.sessionStartedAt) || startedAt;
   const secondsLeft = Math.max(0, Number(f.secondsLeft) || plannedSeconds);
   return {
     minutes,
     running: Boolean(f.running),
-    startedAt: Number(f.startedAt) || null,
-    sessionStartedAt: Number(f.sessionStartedAt) || null,
+    startedAt,
+    sessionStartedAt,
     accumulatedSeconds: Math.max(0, Number(f.accumulatedSeconds) || 0),
     secondsLeft
   };
@@ -33,7 +35,6 @@ export function getRemainingSeconds(focus = getFocus()) {
 }
 
 function getActualSeconds(focus) {
-  if (!focus.sessionStartedAt) return 0;
   const currentSegment = focus.running && focus.startedAt
     ? Math.max(0, Math.floor((Date.now() - focus.startedAt) / 1000))
     : 0;
