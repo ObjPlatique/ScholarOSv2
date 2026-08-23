@@ -1,9 +1,9 @@
 import { initRouter, navigate, registerRoute } from './core/router.js';
-import { getState, resetState, exportState, importState } from './core/store.js';
+import { getState, setState, resetState, exportState, importState } from './core/store.js';
 import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
 import { tasks, schedule, habits, goals, progress, handleToolAction } from './features/tools.js';
-import { focus, focusLogs, handleFocusAction, tickFocus } from './features/focus.js';
+import { focus, handleFocusAction, tickFocus } from './features/focus.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
 import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=20260822-render-v1';
 
@@ -15,7 +15,6 @@ const routes = {
   schedule,
   tasks,
   focus,
-  'focus-logs': focusLogs,
   habits,
   goals,
   progress,
@@ -110,7 +109,7 @@ setInterval(() => {
   if (!completed) return;
   showToast('Hoàn thành một phiên Focus!');
   const route = window.location.hash.replace(/^#\/?/, '') || 'dashboard';
-  if (route === 'focus' || route === 'focus-logs') renderCurrentRoute();
+  if (route === 'focus') renderCurrentRoute();
 }, 250);
 
 applyTheme(getState().theme);
