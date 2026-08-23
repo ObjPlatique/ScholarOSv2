@@ -1,5 +1,5 @@
 const KEY = 'scholaros.v2.state';
-const defaults = { streak: 0, tasks: [], schedule: [], habits: [], goals: [], notes: [], subjects: [], materials: [], colleges: [], focus: { minutes: 25, running: false, startedAt: null, sessionStartedAt: null, accumulatedSeconds: 0, secondsLeft: 1500 }, focusSessions: 0, focusLogs: [], theme: 'light' };
+const defaults = { streak: 0, tasks: [], schedule: [], calendars: [{ id: 'calendar-main', name: 'Lịch học chính', color: '#2563eb' }], activeCalendarId: 'calendar-main', habits: [], goals: [], notes: [], subjects: [], materials: [], colleges: [], focus: { minutes: 25, running: false, startedAt: null, sessionStartedAt: null, accumulatedSeconds: 0, secondsLeft: 1500 }, focusSessions: 0, focusLogs: [], theme: 'light' };
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 
