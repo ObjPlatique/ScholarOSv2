@@ -42,61 +42,11 @@ function saveLog(status, plannedMinutes, actualSeconds, startedAt = null) {
   });
 }
 
-export function focus() {
-  const f = normalizeFocus(getState().focus);
-  return {
-    title: 'Focus',
-    description: 'Tập trung vào một việc trong một khoảng thời gian rõ ràng.',
-    render: () => `
-      <div class="focus-layout">
-        <section class="card focus-card">
-          <span class="eyebrow">FOCUS SESSION</span>
-          <div class="timer" id="focusTimer" aria-live="polite">${formatTime(remainingSeconds(f))}</div>
-          <div class="timer-status" id="focusTimerStatus">${f.running ? 'Đang tập trung' : 'Sẵn sàng'}</div>
-          <div class="focus-controls">
-            <button class="button primary" data-action="focus-toggle">${f.running ? 'Tạm dừng' : 'Bắt đầu'}</button>
-            <button class="button" data-action="focus-reset">Đặt lại</button>
-          </div>
-        </section>
-        <section class="card">
-          <h2>Thời lượng</h2>
-          <p class="muted">Chọn thời lượng trước khi bắt đầu phiên mới.</p>
-          <div class="focus-presets">
-            ${[25, 50, 90].map(min => `<button class="button ${f.minutes === min ? 'selected' : ''}" data-action="focus-preset" data-min="${min}">${min} phút</button>`).join('')}
-          </div>
-          <hr>
-          <h2>Hôm nay</h2>
-          <p class="muted">${todayCompletedCount()} phiên Focus hoàn thành.</p>
-          <a class="text-button focus-log-link" href="#focus-logs" data-route="focus-logs">Xem Focus Logs →</a>
-        </section>
-      </div>`
-  };
-}
-
 function todayCompletedCount() {
   const key = new Date().toISOString().slice(0, 10);
-  return (getState().focusLogs || []).filter(log => log.status === 'completed' && String(log.date).slice(0, 10) === key).length;
-}
-
-export function focusLogs() {
-  const logs = getState().focusLogs || [];
-  return {
-    title: 'Focus Logs',
-    description: 'Lịch sử các phiên tập trung đã hoàn thành hoặc dừng sớm.',
-    render: () => `
-      <div class="module-toolbar">
-        <div>
-          <h2 class="section-title">Lịch sử Focus</h2>
-          <p class="muted">${logs.length} phiên đã được ghi nhận.</p>
-        </div>
-        <button class="button" data-action="focus-logs-clear" ${logs.length ? '' : 'disabled'}>Xóa lịch sử</button>
-      </div>
-      ${logs.length ? `<div class="focus-log-list">${logs.map(renderLog).join('')}</div>` : `
-        <div class="empty-state">
-          <strong>Chưa có Focus Log</strong>
-          Hoàn thành một phiên Focus để lịch sử xuất hiện ở đây.
-        </div>`}`
-  };
+  return (getState().focusLogs || []).filter(
+    log => log.status === 'completed' && String(log.date).slice(0, 10) === key
+  ).length;
 }
 
 function renderLog(log) {
@@ -106,6 +56,7 @@ function renderLog(log) {
   const actualSeconds = (Number(log.actualSeconds) || 0) % 60;
   const date = new Date(log.date);
   const dateText = Number.isNaN(date.getTime()) ? 'Không rõ thời gian' : date.toLocaleString('vi-VN');
+
   return `<article class="focus-log-row">
     <div class="focus-log-icon ${log.status === 'completed' ? 'completed' : 'stopped'}">${icon}</div>
     <div class="focus-log-main">
@@ -116,13 +67,73 @@ function renderLog(log) {
   </article>`;
 }
 
-export function handleFocusAction(action, event, target = null) {
+function renderLogsSection() {
+  const logs = getState().focusLogs || [];
+
+  return `
+    <section class="focus-logs-section" aria-labelledby="focusLogsTitle">
+      <div class="module-toolbar">
+        <div>
+          <h2 class="section-title" id="focusLogsTitle">Focus Logs</h2>
+          <p class="muted">${logs.length} phiên đã được ghi nhận.</p>
+        </div>
+        <button class="button" data-action="focus-logs-clear" ${logs.length ? '' : 'disabled'}>Xóa lịch sử</button>
+      </div>
+      ${logs.length
+        ? `<div class="focus-log-list">${logs.map(renderLog).join('')}</div>`
+        : `<div class="empty-state">
+            <strong>Chưa có Focus Log</strong>
+            Hoàn thành hoặc dừng một phiên Focus để lịch sử xuất hiện ở đây.
+          </div>`}
+    </section>`;
+}
+
+export function focus() {
+  const f = normalizeFocus(getState().focus);
+
+  return {
+    title: 'Focus',
+    description: 'Tập trung vào một việc trong một khoảng thời gian rõ ràng.',
+    render: () => `
+      <section class="card focus-card">
+        <div class="focus-layout">
+          <div class="focus-timer-panel">
+            <span class="eyebrow">FOCUS SESSION</span>
+            <div class="timer" id="focusTimer" aria-live="polite">${formatTime(remainingSeconds(f))}</div>
+            <div class="timer-status" id="focusTimerStatus">${f.running ? 'Đang tập trung' : 'Sẵn sàng'}</div>
+            <div class="focus-controls">
+              <button class="button primary" data-action="focus-toggle">${f.running ? 'Tạm dừng' : 'Bắt đầu'}</button>
+              <button class="button" data-action="focus-reset">Đặt lại</button>
+            </div>
+          </div>
+
+          <div class="focus-settings-panel">
+            <h2>Thời lượng</h2>
+            <p class="muted">Chọn thời lượng trước khi bắt đầu phiên mới.</p>
+            <div class="focus-presets">
+              ${[25, 50, 90].map(min => `
+                <button class="button ${f.minutes === min ? 'selected' : ''}" data-action="focus-preset" data-min="${min}">${min} phút</button>
+              `).join('')}
+            </div>
+            <hr>
+            <h2>Hôm nay</h2>
+            <p class="muted">${todayCompletedCount()} phiên Focus hoàn thành.</p>
+          </div>
+        </div>
+
+        <hr>
+        ${renderLogsSection()}
+      </section>`
+  };
+}
+
+export function handleFocusAction(action, event, actionTarget = event?.currentTarget) {
   const state = getState();
   const f = normalizeFocus(state.focus);
 
   if (action === 'focus-preset') {
     if (f.running) return 'ignored';
-    const minutes = Math.max(1, Number(target?.dataset?.min || event?.currentTarget?.dataset?.min) || DEFAULT_MINUTES);
+    const minutes = Math.max(1, Number(actionTarget?.dataset?.min) || DEFAULT_MINUTES);
     setState({ focus: { minutes, running: false, startedAt: null, secondsLeft: minutes * 60 } });
     return 'refresh';
   }
@@ -139,7 +150,14 @@ export function handleFocusAction(action, event, target = null) {
     if (f.secondsLeft <= 0) {
       setState({ focus: { ...f, running: false, startedAt: null, secondsLeft: f.minutes * 60 } });
     }
-    setState({ focus: { ...normalizeFocus(getState().focus), running: true, startedAt: Date.now() } });
+
+    setState({
+      focus: {
+        ...normalizeFocus(getState().focus),
+        running: true,
+        startedAt: Date.now()
+      }
+    });
     return 'refresh';
   }
 
@@ -177,4 +195,12 @@ export function tickFocus(now = Date.now()) {
   setState({ focus: { ...f, running: false, startedAt: null, secondsLeft: 0 } });
   saveLog('completed', f.minutes, actualSeconds, f.startedAt);
   return true;
+}
+
+export function syncFocusTimer() {
+  const f = normalizeFocus(getState().focus);
+  const timer = document.getElementById('focusTimer');
+  if (timer) timer.textContent = formatTime(remainingSeconds(f));
+  const status = document.getElementById('focusTimerStatus');
+  if (status) status.textContent = f.running ? 'Đang tập trung' : 'Sẵn sàng';
 }
