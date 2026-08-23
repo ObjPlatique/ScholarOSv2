@@ -2,7 +2,8 @@ import { initRouter, navigate, registerRoute } from './core/router.js';
 import { getState, setState, resetState, exportState, importState } from './core/store.js';
 import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
-import { tasks, schedule, focus, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { tasks, schedule, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { focus, focusLogs, handleFocusAction, tickFocus } from './features/focus.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
 import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=20260822-render-v1';
 
@@ -14,6 +15,7 @@ const routes = {
   schedule,
   tasks,
   focus,
+  'focus-logs': focusLogs,
   habits,
   goals,
   progress,
@@ -61,6 +63,7 @@ const appView = document.getElementById('appView');
 appView.addEventListener('click', event => {
   const routeTarget = event.target.closest('[data-route]');
   if (routeTarget && appView.contains(routeTarget)) {
+    event.preventDefault();
     navigate(routeTarget.dataset.route);
     return;
   }
@@ -75,13 +78,17 @@ appView.addEventListener('click', event => {
     return;
   }
 
+  if (action.startsWith('focus-')) {
+    const result = handleFocusAction(action, event);
+    if (result === 'refresh') renderCurrentRoute();
+    return;
+  }
+
   const result = handleAIAction(action, actionTarget.dataset.id, event, actionTarget)
     || handleToolAction(action, actionTarget.dataset.id, event)
     || handleResourceAction(action, actionTarget.dataset.id);
 
-  if (result === 'refresh') {
-    renderCurrentRoute();
-  }
+  if (result === 'refresh') renderCurrentRoute();
 });
 
 appView.addEventListener('submit', event => {
@@ -99,15 +106,12 @@ function renderCurrentRoute() {
 }
 
 setInterval(() => {
-  const f = getState().focus;
-  if (!f?.running || !f.startedAt) return;
-  const left = Math.max(0, f.secondsLeft - Math.floor((Date.now() - f.startedAt) / 1000));
-  if (left <= 0) {
-    setState({ focus: { ...f, running: false, startedAt: null, secondsLeft: f.minutes * 60 }, focusSessions: (getState().focusSessions || 0) + 1 });
-    showToast('Hoàn thành một phiên Focus!');
-    navigate('focus');
-  }
-}, 1000);
+  const completed = tickFocus();
+  if (!completed) return;
+  showToast('Hoàn thành một phiên Focus!');
+  const route = window.location.hash.replace(/^#\/?/, '') || 'dashboard';
+  if (route === 'focus' || route === 'focus-logs') renderCurrentRoute();
+}, 250);
 
 applyTheme(getState().theme);
 updateStreak();
