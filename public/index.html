@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/schedule-fix.css">
   <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
@@ -23,77 +24,20 @@
         <div class="brand-copy"><strong>ScholarOS</strong><span>Personal Learning System</span></div>
         <button class="icon-button mobile-only" id="closeSidebar" aria-label="Đóng menu">×</button>
       </div>
-
       <nav class="navigation" id="navigation">
-        <div class="nav-section">
-          <span class="nav-label">TỔNG QUAN</span>
-          <button class="nav-item active" data-route="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
-        </div>
-
-        <div class="nav-section">
-          <span class="nav-label">AI</span>
-          <button class="nav-item" data-route="ai-chat"><span class="nav-icon">✦</span><span>Scholar AI</span><span class="nav-badge">AI</span></button>
-          <button class="nav-item" data-route="ai-study"><span class="nav-icon">◇</span><span>Study Assistant</span></button>
-          <button class="nav-item" data-route="ai-planner"><span class="nav-icon">⌁</span><span>AI Planner</span></button>
-        </div>
-
-        <div class="nav-section">
-          <span class="nav-label">TOOLS</span>
-          <button class="nav-item" data-route="schedule"><span class="nav-icon">▦</span><span>Thời gian biểu</span></button>
-          <button class="nav-item" data-route="tasks"><span class="nav-icon">✓</span><span>Nhiệm vụ</span></button>
-          <button class="nav-item" data-route="focus"><span class="nav-icon">◷</span><span>Focus</span></button>
-          <button class="nav-item" data-route="habits"><span class="nav-icon">◎</span><span>Thói quen</span></button>
-          <button class="nav-item" data-route="goals"><span class="nav-icon">⚑</span><span>Mục tiêu</span></button>
-          <button class="nav-item" data-route="progress"><span class="nav-icon">◒</span><span>Tiến độ</span></button>
-        </div>
-
-        <div class="nav-section">
-          <span class="nav-label">RESOURCES</span>
-          <button class="nav-item" data-route="notes"><span class="nav-icon">▤</span><span>Ghi chú</span></button>
-          <button class="nav-item" data-route="academic"><span class="nav-icon">📚</span><span>Học tập</span></button>
-          <button class="nav-item" data-route="college"><span class="nav-icon">⌂</span><span>Đại học</span></button>
-        </div>
+        <div class="nav-section"><span class="nav-label">TỔNG QUAN</span><button class="nav-item active" data-route="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button></div>
+        <div class="nav-section"><span class="nav-label">AI</span><button class="nav-item" data-route="ai-chat"><span class="nav-icon">✦</span><span>Scholar AI</span><span class="nav-badge">AI</span></button><button class="nav-item" data-route="ai-study"><span class="nav-icon">◇</span><span>Study Assistant</span></button><button class="nav-item" data-route="ai-planner"><span class="nav-icon">⌁</span><span>AI Planner</span></button></div>
+        <div class="nav-section"><span class="nav-label">TOOLS</span><button class="nav-item" data-route="schedule"><span class="nav-icon">▦</span><span>Thời gian biểu</span></button><button class="nav-item" data-route="tasks"><span class="nav-icon">✓</span><span>Nhiệm vụ</span></button><button class="nav-item" data-route="focus"><span class="nav-icon">◷</span><span>Focus</span></button><button class="nav-item" data-route="habits"><span class="nav-icon">◎</span><span>Thói quen</span></button><button class="nav-item" data-route="goals"><span class="nav-icon">⚑</span><span>Mục tiêu</span></button><button class="nav-item" data-route="progress"><span class="nav-icon">◒</span><span>Tiến độ</span></button></div>
+        <div class="nav-section"><span class="nav-label">RESOURCES</span><button class="nav-item" data-route="notes"><span class="nav-icon">▤</span><span>Ghi chú</span></button><button class="nav-item" data-route="academic"><span class="nav-icon">📚</span><span>Học tập</span></button><button class="nav-item" data-route="college"><span class="nav-icon">⌂</span><span>Đại học</span></button></div>
       </nav>
-
-      <div class="sidebar-footer">
-        <button class="utility-item" id="exportBtn"><span>⇩</span> Xuất dữ liệu</button>
-        <label class="utility-item" for="importFile"><span>⇧</span> Nhập dữ liệu<input id="importFile" type="file" accept="application/json,.json" hidden></label>
-        <button class="utility-item danger" id="resetBtn"><span>↻</span> Đặt lại dữ liệu</button>
-      </div>
+      <div class="sidebar-footer"><button class="utility-item" id="exportBtn"><span>⇩</span> Xuất dữ liệu</button><label class="utility-item" for="importFile"><span>⇧</span> Nhập dữ liệu<input id="importFile" type="file" accept="application/json,.json" hidden></label><button class="utility-item danger" id="resetBtn"><span>↻</span> Đặt lại dữ liệu</button></div>
     </aside>
-
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-
     <main class="main-content">
-      <header class="top-header">
-        <button class="icon-button mobile-only" id="openSidebar" aria-label="Mở menu">☰</button>
-        <div class="header-context">
-          <span class="status-dot"></span><span>ScholarOS v2 Study Core</span>
-        </div>
-        <div class="header-actions">
-          <button class="header-action" id="searchButton" title="Tìm kiếm"><span>⌕</span><span class="desktop-only">Tìm kiếm</span></button>
-          <button class="header-action" id="themeButton" title="Đổi giao diện"><span id="themeIcon">☾</span><span class="desktop-only">Giao diện</span></button>
-        </div>
-      </header>
-
-      <section class="page-container">
-        <div class="page-heading">
-          <div>
-            <p class="eyebrow" id="pageEyebrow">PERSONAL LEARNING SYSTEM</p>
-            <h1 id="pageTitle">Dashboard</h1>
-            <p id="pageDescription">Tập trung vào việc học quan trọng nhất hôm nay.</p>
-          </div>
-          <div class="page-heading-actions">
-            <div class="streak-pill">🔥 <strong id="streakValue">0</strong> ngày</div>
-            <button class="button primary" id="quickFocus">▶ Bắt đầu Focus</button>
-          </div>
-        </div>
-
-        <section id="appView" aria-live="polite"></section>
-      </section>
+      <header class="top-header"><button class="icon-button mobile-only" id="openSidebar" aria-label="Mở menu">☰</button><div class="header-context"><span class="status-dot"></span><span>ScholarOS v2 Study Core</span></div><div class="header-actions"><button class="header-action" id="searchButton" title="Tìm kiếm"><span>⌕</span><span class="desktop-only">Tìm kiếm</span></button><button class="header-action" id="themeButton" title="Đổi giao diện"><span id="themeIcon">☾</span><span class="desktop-only">Giao diện</span></button></div></header>
+      <section class="page-container"><div class="page-heading"><div><p class="eyebrow" id="pageEyebrow">PERSONAL LEARNING SYSTEM</p><h1 id="pageTitle">Dashboard</h1><p id="pageDescription">Tập trung vào việc học quan trọng nhất hôm nay.</p></div><div class="page-heading-actions"><div class="streak-pill">🔥 <strong id="streakValue">0</strong> ngày</div><button class="button primary" id="quickFocus">▶ Bắt đầu Focus</button></div></div><section id="appView" aria-live="polite"></section></section>
     </main>
   </div>
-
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="js/app.js"></script>
 </body>
