@@ -8,6 +8,7 @@ import { schedule, handleScheduleAction } from './features/schedule.js';
 import { focus, handleFocusAction } from './features/focus.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
 import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=20260822-render-v1';
+import { handlePlannerAction } from './features/ai-planner.js';
 
 const routes = { dashboard, 'ai-chat': aiChat, 'ai-study': aiStudy, 'ai-planner': aiPlanner, schedule, tasks, focus, habits, goals, progress, notes, academic, college };
 Object.entries(routes).forEach(([name, route]) => registerRoute(name, route));
@@ -38,6 +39,7 @@ appView.addEventListener('click', event => {
   event.stopPropagation();
   if (action === 'schedule-close-modal' && event.target.closest('.schedule-modal') && !event.target.closest('button[data-action="schedule-close-modal"]')) return;
   if (action === 'quiz-answer') { window.__scholarQuizAnswer?.(actionTarget); return; }
+  if (action === 'ai-optimize-schedule') { handlePlannerAction(actionTarget); return; }
   if (action?.startsWith('schedule-')) {
     const scheduleResult = handleScheduleAction(action, actionTarget.dataset.id, event, actionTarget);
     if (scheduleResult === 'refresh') renderCurrentRoute();
