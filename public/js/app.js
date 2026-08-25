@@ -2,7 +2,8 @@ import { initRouter, navigate, registerRoute } from './core/router.js';
 import { getState, resetState, exportState, importState } from './core/store.js';
 import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
-import { tasks, schedule as legacySchedule, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { schedule as legacySchedule, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { tasks, handleTaskAction } from './features/tasks.js';
 import { schedule, handleScheduleAction } from './features/schedule.js';
 import { focus, handleFocusAction } from './features/focus.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
@@ -42,6 +43,11 @@ appView.addEventListener('click', event => {
     if (scheduleResult === 'refresh') renderCurrentRoute();
     return;
   }
+  if (action?.startsWith('task-')) {
+    const taskResult = handleTaskAction(action, actionTarget.dataset.id, event, actionTarget);
+    if (taskResult === 'refresh') renderCurrentRoute();
+    return;
+  }
   const focusResult = handleFocusAction(action, actionTarget);
   if (focusResult === 'refresh') { renderCurrentRoute(); return; }
   const result = handleAIAction(action, actionTarget.dataset.id, event, actionTarget) || handleToolAction(action, actionTarget.dataset.id, event) || handleResourceAction(action, actionTarget.dataset.id);
@@ -56,6 +62,11 @@ appView.addEventListener('submit', event => {
   if (action?.startsWith('schedule-')) {
     const scheduleResult = handleScheduleAction(action, form.dataset.id, event, form);
     if (scheduleResult === 'refresh') renderCurrentRoute();
+    return;
+  }
+  if (action?.startsWith('task-')) {
+    const taskResult = handleTaskAction(action, form.dataset.id, event, form);
+    if (taskResult === 'refresh') renderCurrentRoute();
     return;
   }
   const focusResult = handleFocusAction(action, form);
