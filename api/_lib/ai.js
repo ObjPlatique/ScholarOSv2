@@ -1,7 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 
-export const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
-export const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash';
+export const MODEL = process.env.GEMINI_MODEL || 'gemini-3.7-flash';
+export const FALLBACK_MODEL = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.6-flash';
+const KNOWN_MODELS = ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash'];
 
 export function json(res, status, payload) {
   res.status(status).setHeader('Content-Type', 'application/json; charset=utf-8').end(JSON.stringify(payload));
@@ -43,7 +44,7 @@ function isRetryable(status) {
 
 export async function generate(input, config = {}) {
   const ai = getAI();
-  const models = [...new Set([MODEL, FALLBACK_MODEL].filter(Boolean))];
+  const models = [...new Set([MODEL, FALLBACK_MODEL, ...KNOWN_MODELS].filter(Boolean))];
   let lastError = null;
 
   for (const model of models) {
@@ -58,22 +59,15 @@ export async function generate(input, config = {}) {
         lastError = err;
         const status = statusOf(err);
 
-        // Retry transient Gemini failures before trying the fallback model.
         if (isRetryable(status) && attempt < 2) {
           await sleep(700 * (attempt + 1));
           continue;
         }
 
-        // Authentication, malformed requests, and other non-transient errors
-        // should not be retried against the same model.
+        // 404 can mean the configured model is unavailable. Continue to the
+        // next known-good model instead of stopping the entire AI request.
         break;
       }
-    }
-
-    // If the primary model is unavailable, try the configured fallback.
-    if (models.length > 1 && model !== models[models.length - 1]) {
-      const status = statusOf(lastError);
-      if (!isRetryable(status) && status !== 404) break;
     }
   }
 
@@ -98,7 +92,7 @@ export function aiErrorMessage(err) {
   if (err?.code === 'MISSING_API_KEY') return { status: 500, message: err.message };
   if (status === 401 || status === 403) return { status, message: 'Gemini API key không hợp lệ hoặc không có quyền truy cập.' };
   if (status === 429) return { status, message: 'Gemini API đang giới hạn tốc độ. Hãy thử lại sau.' };
-  if (status === 404) return { status, message: 'Gemini model hoặc API endpoint không tồn tại. Kiểm tra GEMINI_MODEL trên Vercel.' };
-  if (status >= 500) return { status: 502, message: 'Gemini API đang gặp lỗi tạm thời. Hệ thống đã tự thử lại và dùng model dự phòng nếu cần.' };
+  if (status === 404) return { status, message: 'Không có model Gemini khả dụng. Kiểm tra GEMINI_MODEL/GEMINI_FALLBACK_MODEL trên Vercel.' };
+  if (status >= 500) return { status: 502, message: 'Gemini API đang gặp lỗi tạm thời. Hệ thống đã thử lại nhiều model.' };
   return { status: status >= 400 && status < 600 ? status : 500, message: err?.message || 'AI request failed.' };
 }
