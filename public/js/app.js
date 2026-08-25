@@ -31,27 +31,19 @@ const appView = document.getElementById('appView');
 appView.addEventListener('click', event => {
   const routeTarget = event.target.closest('[data-route]');
   if (routeTarget && appView.contains(routeTarget)) { navigate(routeTarget.dataset.route); return; }
-
   const actionTarget = event.target.closest('button[data-action], [role="button"][data-action], [data-action="schedule-close-modal"]');
   if (!actionTarget || !appView.contains(actionTarget)) return;
-
   const action = actionTarget.dataset.action;
   event.stopPropagation();
   if (action === 'schedule-close-modal' && event.target.closest('.schedule-modal') && !event.target.closest('button[data-action="schedule-close-modal"]')) return;
   if (action === 'quiz-answer') { window.__scholarQuizAnswer?.(actionTarget); return; }
-
-  // Schedule owns every schedule-* action. Do not pass it through legacy
-  // tool/AI/resource handlers because those handlers use different semantics
-  // and the legacy tool handler refreshes unknown actions.
   if (action?.startsWith('schedule-')) {
     const scheduleResult = handleScheduleAction(action, actionTarget.dataset.id, event, actionTarget);
     if (scheduleResult === 'refresh') renderCurrentRoute();
     return;
   }
-
   const focusResult = handleFocusAction(action, actionTarget);
   if (focusResult === 'refresh') { renderCurrentRoute(); return; }
-
   const result = handleAIAction(action, actionTarget.dataset.id, event, actionTarget) || handleToolAction(action, actionTarget.dataset.id, event) || handleResourceAction(action, actionTarget.dataset.id);
   if (result === 'refresh') renderCurrentRoute();
 });
@@ -61,15 +53,14 @@ appView.addEventListener('submit', event => {
   if (!form || !appView.contains(form)) return;
   event.preventDefault();
   const action = form.dataset.action;
-
-  // Schedule forms are handled exclusively by the Schedule module.
   if (action?.startsWith('schedule-')) {
     const scheduleResult = handleScheduleAction(action, form.dataset.id, event, form);
     if (scheduleResult === 'refresh') renderCurrentRoute();
     return;
   }
-
-  const result = handleAIAction(action, form.dataset.id, event, form);
+  const focusResult = handleFocusAction(action, form);
+  if (focusResult === 'refresh') { renderCurrentRoute(); return; }
+  const result = handleAIAction(action, form.dataset.id, event, form) || handleToolAction(action, form.dataset.id, event) || handleResourceAction(action, form.dataset.id);
   if (result === 'refresh') renderCurrentRoute();
 });
 
