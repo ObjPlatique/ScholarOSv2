@@ -33,48 +33,29 @@ const appView = document.getElementById('appView');
 appView.addEventListener('click', event => {
   const routeTarget = event.target.closest('[data-route]');
   if (routeTarget && appView.contains(routeTarget)) { navigate(routeTarget.dataset.route); return; }
-  const actionTarget = event.target.closest('button[data-action], [role="button"][data-action], [data-action="schedule-close-modal"]');
+  const actionTarget = event.target.closest('button[data-action], [role="button"][data-action], [data-action="schedule-close-modal"], [data-action="resource-close-modal"]');
   if (!actionTarget || !appView.contains(actionTarget)) return;
   const action = actionTarget.dataset.action;
   event.stopPropagation();
   if (action === 'schedule-close-modal' && event.target.closest('.schedule-modal') && !event.target.closest('button[data-action="schedule-close-modal"]')) return;
+  if (action === 'resource-close-modal' && event.target.closest('.resource-modal') && !event.target.closest('button[data-action="resource-close-modal"]')) return;
   if (action === 'quiz-answer') { window.__scholarQuizAnswer?.(actionTarget); return; }
   if (action === 'ai-optimize-schedule') { handlePlannerAction(actionTarget); return; }
-  if (action?.startsWith('schedule-')) {
-    const scheduleResult = handleScheduleAction(action, actionTarget.dataset.id, event, actionTarget);
-    if (scheduleResult === 'refresh') renderCurrentRoute();
-    return;
-  }
-  if (action?.startsWith('task-')) {
-    const taskResult = handleTaskAction(action, actionTarget.dataset.id, event, actionTarget);
-    if (taskResult === 'refresh') renderCurrentRoute();
-    return;
-  }
-  const focusResult = handleFocusAction(action, actionTarget);
-  if (focusResult === 'refresh') { renderCurrentRoute(); return; }
-  const result = handleAIAction(action, actionTarget.dataset.id, event, actionTarget) || handleToolAction(action, actionTarget.dataset.id, event) || handleResourceAction(action, actionTarget.dataset.id);
-  if (result === 'refresh') renderCurrentRoute();
+  if (action?.startsWith('schedule-')) { const r = handleScheduleAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
+  if (action?.startsWith('task-')) { const r = handleTaskAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
+  if (action?.startsWith('resource-') || /^(note|subject|material|college)-/.test(action)) { const r = handleResourceAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
+  const focusResult = handleFocusAction(action, actionTarget); if (focusResult === 'refresh') { renderCurrentRoute(); return; }
+  const result = handleAIAction(action, actionTarget.dataset.id, event, actionTarget) || handleToolAction(action, actionTarget.dataset.id, event); if (result === 'refresh') renderCurrentRoute();
 });
 
 appView.addEventListener('submit', event => {
-  const form = event.target.closest('form[data-action]');
-  if (!form || !appView.contains(form)) return;
-  event.preventDefault();
-  const action = form.dataset.action;
-  if (action?.startsWith('schedule-')) {
-    const scheduleResult = handleScheduleAction(action, form.dataset.id, event, form);
-    if (scheduleResult === 'refresh') renderCurrentRoute();
-    return;
-  }
-  if (action?.startsWith('task-')) {
-    const taskResult = handleTaskAction(action, form.dataset.id, event, form);
-    if (taskResult === 'refresh') renderCurrentRoute();
-    return;
-  }
-  const focusResult = handleFocusAction(action, form);
-  if (focusResult === 'refresh') { renderCurrentRoute(); return; }
-  const result = handleAIAction(action, form.dataset.id, event, form) || handleToolAction(action, form.dataset.id, event) || handleResourceAction(action, form.dataset.id);
-  if (result === 'refresh') renderCurrentRoute();
+  const form = event.target.closest('form[data-action]'); if (!form || !appView.contains(form)) return;
+  event.preventDefault(); const action = form.dataset.action;
+  if (action?.startsWith('schedule-')) { const r = handleScheduleAction(action, form.dataset.id, event, form); if (r === 'refresh') renderCurrentRoute(); return; }
+  if (action?.startsWith('task-')) { const r = handleTaskAction(action, form.dataset.id, event, form); if (r === 'refresh') renderCurrentRoute(); return; }
+  if (action?.startsWith('resource-') || /^(note|subject|material|college)-(create|update)$/.test(action)) { const r = handleResourceAction(action, form.dataset.id, event, form); if (r === 'refresh') renderCurrentRoute(); return; }
+  const focusResult = handleFocusAction(action, form); if (focusResult === 'refresh') { renderCurrentRoute(); return; }
+  const result = handleAIAction(action, form.dataset.id, event, form) || handleToolAction(action, form.dataset.id, event); if (result === 'refresh') renderCurrentRoute();
 });
 
 function renderCurrentRoute() { const route = window.location.hash.replace(/^#\/?/, '') || 'dashboard'; navigate(route, { replace: true }); }
