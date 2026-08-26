@@ -12,7 +12,7 @@ export function createDefaultScheduleAsset() {
       start: `${pad(hour)}:00`,
       duration: 60,
       type: 'study',
-      recurrence: 'once',
+      recurrence: 'weekly',
       color: '#2563eb',
       focusLinked: false,
       notes: 'Phiên mặc định của ScholarOS. Bạn có thể chỉnh sửa hoặc xóa phiên này.'
