@@ -56,7 +56,7 @@ export function handleScheduleAction(action, id, event) {
   if(action==='schedule-add'){openModal(modal('add'));return 'handled';}
   if(action==='schedule-edit'){const item=(active.events||[]).find(e=>e.id===id);if(item)openModal(modal('edit',{...item}));return 'handled';}
   if(action==='schedule-modal-close'){closeModal();return 'handled';}
-  if(action==='schedule-save-submit'){const form=document.querySelector('.schedule-form');if(!form||!form.reportValidity())return 'handled';saveForm(form,id);return 'refresh';}
+  if(action==='schedule-save-submit'){const form=document.querySelector('.schedule-form');if(!form||!form.reportValidity())return 'handled';if(saveForm(form,id)===false)return 'handled';return 'refresh';}
   if(action==='schedule-delete'){if(!confirm('Xóa phiên này?'))return 'handled';if(id){const owner=calendars.find(c=>(c.events||[]).some(e=>e.id===id));if(owner){owner.events=owner.events.filter(e=>e.id!==id);calendars=syncCalendar(owner,calendars);setState({calendars,activeCalendarId:active.id,schedule:active.events||[]});}}else if(calendars.length>1){calendars=calendars.filter(c=>c.id!==active.id);setState({calendars,activeCalendarId:calendars[0].id,schedule:calendars[0].events||[]});return 'refresh';}setState({calendars,schedule:active.events||[]});closeModal();return 'refresh';}
   if(action==='schedule-calendar-switch'){const next=calendars.find(c=>c.id===id)||active;setState({activeCalendarId:next.id,schedule:next.events||[]});return 'refresh';}
   if(action==='schedule-calendar-add'){const name=prompt('Tên lịch mới:','Lịch mới');if(!name?.trim())return 'handled';const calendar={id:`calendar-${Date.now()}`,name:name.trim(),color:'var(--primary)',events:[]};calendars.push(calendar);setState({calendars,activeCalendarId:calendar.id,schedule:[]});return 'refresh';}
@@ -68,11 +68,12 @@ export function handleScheduleAction(action, id, event) {
 function saveForm(form,id){
   const data=new FormData(form); const type=String(data.get('type')||'study'); const preset=String(data.get('colorPreset')||''); const custom=String(data.get('color')||'');
   const duration=Number(data.get('duration'));
-  if(!Number.isFinite(duration)||duration<1||duration>720){form.querySelector('[name="duration"]')?.focus();return;}
+  if(!Number.isFinite(duration)||duration<1||duration>720){form.querySelector('[name="duration"]')?.focus();return false;}
   const item={id:id||uid(),title:String(data.get('title')||'').trim(),date:String(data.get('date')||isoDate(new Date())),start:String(data.get('start')||'19:00'),duration:normalizeDuration(duration),type,recurrence:data.get('recurrence')==='weekly'?'weekly':'once',color:preset||custom||defaultColor(type),focusLinked:data.get('focusLinked')==='on',notes:String(data.get('notes')||'')};
   const state=normalizeState(); const calendars=visibleCalendars(state); const target=activeCalendar(state);
   if(id){const old=calendars.find(c=>(c.events||[]).some(e=>e.id===id));if(old)old.events=old.events.filter(e=>e.id!==id);}
   target.events=[...(target.events||[]),item];setState({calendars,activeCalendarId:target.id,schedule:target.events});closeModal();
+  return true;
 }
-function openModal(html){closeModal();document.body.insertAdjacentHTML('beforeend',html);}
+function openModal(html){closeModal();const host=document.getElementById('appView') || document.body;host.insertAdjacentHTML('beforeend',html);}
 function closeModal(){document.querySelector('[data-schedule-modal]')?.remove();}
