@@ -20,6 +20,8 @@ document.getElementById('sidebarBackdrop').addEventListener('click', closeSideba
 document.getElementById('themeButton').addEventListener('click', toggleTheme);
 document.getElementById('quickFocus').addEventListener('click', () => { navigate('focus'); showToast('Đã mở khu vực Focus.'); });
 document.getElementById('searchButton').addEventListener('click', () => showToast('Search sẽ được thêm ở Core phase.'));
+document.getElementById('loginButton').addEventListener('click', () => auth.open('login'));
+document.getElementById('signupButton').addEventListener('click', () => auth.open('signup'));
 document.getElementById('exportBtn').addEventListener('click', exportData);
 document.getElementById('importFile').addEventListener('change', importData);
 document.getElementById('resetBtn').addEventListener('click', () => { if (!confirm('Đặt lại toàn bộ dữ liệu ScholarOS v2?')) return; resetState(); updateStreak(); showToast('Đã đặt lại dữ liệu.'); navigate('dashboard'); });
