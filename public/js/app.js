@@ -66,3 +66,4 @@ window.addEventListener('scholaros:focus-finished', event => { showToast(event.d
 applyTheme(getState().theme);
 updateStreak();
 initRouter();
+if (new URLSearchParams(window.location.search).get('auth') === '1') navigate('auth', { replace: true });
