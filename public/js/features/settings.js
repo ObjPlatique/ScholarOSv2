@@ -1,7 +1,7 @@
 import { navigate } from '../core/router.js';
 import { getSupabase } from '../core/supabase.js';
 import { getState, resetState } from '../core/store.js';
-import { applyTheme } from '../core/theme.js';
+import { setTheme } from '../core/theme.js';
 
 let settingsStatus = null;
 let busy = false;
@@ -11,12 +11,12 @@ export const settings = {
   description: 'Quản lý giao diện và tài khoản ScholarOS của bạn.',
   eyebrow: 'SETTINGS',
   render() {
-    const theme = getState().theme || 'light';
+    const theme = getState().theme === 'dark' ? 'dark' : 'light';
     return `<section class="settings-page">
       <div class="settings-grid">
         <article class="settings-card card">
           <div class="settings-section-heading"><div class="settings-icon">◐</div><div><h2>Giao diện</h2><p>Tùy chỉnh cách ScholarOS hiển thị trên thiết bị của bạn.</p></div></div>
-          <div class="settings-row"><div><strong>Chế độ giao diện</strong><span>Sáng hoặc tối</span></div><div class="theme-choice-group"><button class="theme-choice ${theme === 'light' ? 'active' : ''}" data-action="settings-theme-light" aria-pressed="${theme === 'light'}">☀ Sáng</button><button class="theme-choice ${theme === 'dark' ? 'active' : ''}" data-action="settings-theme-dark" aria-pressed="${theme === 'dark'}">☾ Tối</button></div></div>
+          <div class="settings-row"><div><strong>Chế độ giao diện</strong><span>Sáng hoặc tối</span></div><div class="theme-choice-group" role="group" aria-label="Chế độ giao diện"><button type="button" class="theme-choice ${theme === 'light' ? 'active' : ''}" data-action="settings-theme-light" aria-pressed="${theme === 'light'}">☀ Sáng</button><button type="button" class="theme-choice ${theme === 'dark' ? 'active' : ''}" data-action="settings-theme-dark" aria-pressed="${theme === 'dark'}">☾ Tối</button></div></div>
         </article>
 
         <article class="settings-card card">
@@ -27,13 +27,11 @@ export const settings = {
             <label class="field"><span>Xác nhận mật khẩu mới</span><input name="confirmPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Nhập lại mật khẩu" required></label>
             <button class="button" type="submit" ${busy ? 'disabled' : ''}>Đổi mật khẩu</button>
           </form>
-
           <form class="settings-form settings-divider" data-action="settings-email">
             <div class="settings-subheading"><strong>Đổi email</strong><span>Supabase có thể yêu cầu xác minh email mới.</span></div>
             <label class="field"><span>Email mới</span><input name="email" type="email" autocomplete="email" placeholder="email-moi@example.com" required></label>
             <button class="button" type="submit" ${busy ? 'disabled' : ''}>Đổi email</button>
           </form>
-
           <form class="settings-form settings-divider" data-action="settings-nickname">
             <div class="settings-subheading"><strong>Đổi nickname</strong><span>Tên hiển thị trên thanh menu tài khoản.</span></div>
             <label class="field"><span>Nickname</span><input name="nickname" type="text" maxlength="40" value="${escapeHtml(window.__scholarUser?.user_metadata?.nickname || '')}" placeholder="Tên hiển thị của bạn" required></label>
@@ -66,10 +64,8 @@ export const settings = {
 
 export async function handleSettingsAction(action, _id, event, target) {
   if (action === 'settings-theme-light' || action === 'settings-theme-dark') {
-    const theme = action.endsWith('dark') ? 'dark' : 'light';
-    const state = getState();
-    localStorage.setItem('scholaros.v2.state', JSON.stringify({ ...state, theme }));
-    applyTheme(theme);
+    setTheme(action.endsWith('dark') ? 'dark' : 'light');
+    settingsStatus = null;
     renderSettings();
     return 'refresh';
   }
