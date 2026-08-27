@@ -1,3 +1,4 @@
+import { navigate } from '../core/router.js';
 import { getSupabase } from '../core/supabase.js';
 
 let authMode = 'login';
@@ -13,10 +14,7 @@ export const auth = {
     return `
       <section class="auth-page">
         <div class="auth-shell">
-          <div class="auth-brand">
-            <div class="auth-logo" aria-hidden="true">S</div>
-            <div><strong>ScholarOS</strong><span>Personal Learning System</span></div>
-          </div>
+          <div class="auth-brand"><div class="auth-logo" aria-hidden="true">S</div><div><strong>ScholarOS</strong><span>Personal Learning System</span></div></div>
           <div class="auth-card card">
             <div class="auth-heading">
               <span class="auth-kicker">TÀI KHOẢN</span>
@@ -44,11 +42,7 @@ export const auth = {
     try {
       const supabase = await getSupabase();
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        resendEmail = session.user.email || '';
-        authStatus = { type: 'success', message: `Đã đăng nhập với <strong>${escapeHtml(session.user.email || '')}</strong>.` };
-        document.getElementById('appView').innerHTML = renderSignedIn(session.user);
-      }
+      if (session?.user) document.getElementById('appView').innerHTML = renderSignedIn(session.user);
     } catch (error) {
       authStatus = { type: 'error', message: escapeHtml(error.message || 'Chưa thể kết nối Supabase.') };
       rerenderAuth();
@@ -82,8 +76,7 @@ export async function handleAuthAction(action, _id, event, target) {
   }
 
   if (action === 'auth-go-dashboard') {
-    window.location.hash = '#dashboard';
-    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    navigate('dashboard');
     return;
   }
 
@@ -139,9 +132,7 @@ export async function handleAuthAction(action, _id, event, target) {
       if (error) throw error;
       resendEmail = email;
       if (result.session) {
-        authStatus = { type: 'success', message: 'Tạo tài khoản thành công. Tài khoản đã được xác thực theo cấu hình hiện tại.' };
-        window.location.hash = '#dashboard';
-        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        navigate('dashboard');
       } else {
         authStatus = { type: 'success', message: `Đã tạo tài khoản. Hãy kiểm tra email <strong>${escapeHtml(email)}</strong> để xác minh trước khi đăng nhập.` };
       }
@@ -149,8 +140,7 @@ export async function handleAuthAction(action, _id, event, target) {
       const { data: result, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       if (!result.session) throw new Error('Đăng nhập chưa hoàn tất. Hãy xác minh email trước.');
-      window.location.hash = '#dashboard';
-      window.dispatchEvent(new HashChangeEvent('hashchange'));
+      navigate('dashboard');
     }
   } catch (error) {
     authStatus = { type: 'error', message: escapeHtml(normalizeAuthError(error)) };
