@@ -9,8 +9,9 @@ import { focus, handleFocusAction } from './features/focus.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
 import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=20260822-render-v1';
 import { handlePlannerAction } from './features/ai-planner.js';
+import { auth, handleAuthAction } from './features/auth.js';
 
-const routes = { dashboard, 'ai-chat': aiChat, 'ai-study': aiStudy, 'ai-planner': aiPlanner, schedule, tasks, focus, habits, goals, progress, notes, academic, college };
+const routes = { dashboard, 'ai-chat': aiChat, 'ai-study': aiStudy, 'ai-planner': aiPlanner, schedule, tasks, focus, habits, goals, progress, notes, academic, college, auth };
 Object.entries(routes).forEach(([name, route]) => registerRoute(name, route));
 
 document.getElementById('openSidebar').addEventListener('click', () => document.getElementById('sidebar').classList.add('open'));
@@ -19,6 +20,8 @@ document.getElementById('sidebarBackdrop').addEventListener('click', closeSideba
 document.getElementById('themeButton').addEventListener('click', toggleTheme);
 document.getElementById('quickFocus').addEventListener('click', () => { navigate('focus'); showToast('Đã mở khu vực Focus.'); });
 document.getElementById('searchButton').addEventListener('click', () => showToast('Search sẽ được thêm ở Core phase.'));
+document.getElementById('loginButton').addEventListener('click', () => auth.open('login'));
+document.getElementById('signupButton').addEventListener('click', () => auth.open('signup'));
 document.getElementById('exportBtn').addEventListener('click', exportData);
 document.getElementById('importFile').addEventListener('change', importData);
 document.getElementById('resetBtn').addEventListener('click', () => { if (!confirm('Đặt lại toàn bộ dữ liệu ScholarOS v2?')) return; resetState(); updateStreak(); showToast('Đã đặt lại dữ liệu.'); navigate('dashboard'); });
@@ -41,6 +44,7 @@ appView.addEventListener('click', event => {
   if (action === 'resource-close-modal' && event.target.closest('.resource-modal') && !event.target.closest('button[data-action="resource-close-modal"]')) return;
   if (action === 'quiz-answer') { window.__scholarQuizAnswer?.(actionTarget); return; }
   if (action === 'ai-optimize-schedule') { handlePlannerAction(actionTarget); return; }
+  if (action?.startsWith('auth-')) { handleAuthAction(action, actionTarget.dataset.id, event, actionTarget); return; }
   if (action?.startsWith('schedule-')) { const r = handleScheduleAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
   if (action?.startsWith('task-')) { const r = handleTaskAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
   if (action?.startsWith('resource-') || /^(note|subject|material|college)-/.test(action)) { const r = handleResourceAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
@@ -51,6 +55,7 @@ appView.addEventListener('click', event => {
 appView.addEventListener('submit', event => {
   const form = event.target.closest('form[data-action]'); if (!form || !appView.contains(form)) return;
   event.preventDefault(); const action = form.dataset.action;
+  if (action?.startsWith('auth-')) { handleAuthAction(action, form.dataset.id, event, form); return; }
   if (action?.startsWith('schedule-')) { const r = handleScheduleAction(action, form.dataset.id, event, form); if (r === 'refresh') renderCurrentRoute(); return; }
   if (action?.startsWith('task-')) { const r = handleTaskAction(action, form.dataset.id, event, form); if (r === 'refresh') renderCurrentRoute(); return; }
   if (action?.startsWith('resource-') || /^(note|subject|material|college)-(create|update)$/.test(action)) { const r = handleResourceAction(action, form.dataset.id, event, form); if (r === 'refresh') renderCurrentRoute(); return; }
@@ -63,3 +68,4 @@ window.addEventListener('scholaros:focus-finished', event => { showToast(event.d
 applyTheme(getState().theme);
 updateStreak();
 initRouter();
+if (new URLSearchParams(window.location.search).get('auth') === '1') navigate('auth', { replace: true });
