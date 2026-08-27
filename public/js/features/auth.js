@@ -32,6 +32,7 @@ export const auth = {
               <button class="button primary auth-submit" type="submit" ${authBusy ? 'disabled' : ''}>${authBusy ? 'Đang xử lý…' : authMode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</button>
             </form>
             ${authStatus ? `<div class="auth-status ${authStatus.type || ''}" role="status">${authStatus.message}</div>` : ''}
+            ${authStatus?.type === 'success' && resendEmail ? '<button class="text-button auth-resend" data-action="auth-resend">Gửi lại email xác minh</button>' : ''}
             <div class="auth-note"><span aria-hidden="true">🔒</span><span>Dữ liệu tài khoản sẽ được bảo vệ bằng Supabase Auth + Row Level Security khi module dữ liệu được kết nối.</span></div>
           </div>
           <p class="auth-footer">Bạn có thể dùng ScholarOS trên máy tính và điện thoại với cùng một tài khoản.</p>
@@ -71,6 +72,7 @@ export async function handleAuthAction(action, _id, event, target) {
   if (action === 'auth-mode-login' || action === 'auth-mode-signup') {
     authMode = action.endsWith('signup') ? 'signup' : 'login';
     authStatus = '';
+    resendEmail = '';
     rerenderAuth();
     return;
   }
@@ -87,11 +89,30 @@ export async function handleAuthAction(action, _id, event, target) {
       if (error) throw error;
       authStatus = { type: 'success', message: 'Đã đăng xuất.' };
       authMode = 'login';
+      resendEmail = '';
       rerenderAuth();
     } catch (error) {
       authStatus = { type: 'error', message: escapeHtml(error.message || 'Không thể đăng xuất.') };
       rerenderAuth();
     }
+    return;
+  }
+
+  if (action === 'auth-resend') {
+    if (!resendEmail) return;
+    try {
+      const supabase = await getSupabase();
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: resendEmail,
+        options: { emailRedirectTo: `${window.location.origin}/?auth=1` }
+      });
+      if (error) throw error;
+      authStatus = { type: 'success', message: `Đã gửi lại email xác minh tới <strong>${escapeHtml(resendEmail)}</strong>.` };
+    } catch (error) {
+      authStatus = { type: 'error', message: escapeHtml(error.message || 'Không thể gửi lại email.') };
+    }
+    rerenderAuth();
     return;
   }
 
@@ -127,7 +148,7 @@ export async function handleAuthAction(action, _id, event, target) {
       const { data: result, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: window.location.origin }
+        options: { emailRedirectTo: `${window.location.origin}/?auth=1` }
       });
       if (error) throw error;
       resendEmail = email;
