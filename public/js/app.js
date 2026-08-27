@@ -12,6 +12,7 @@ import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=2
 import { handlePlannerAction } from './features/ai-planner.js';
 import { auth, handleAuthAction } from './features/auth.js';
 import { settings, handleSettingsAction } from './features/settings.js';
+import { openSearch } from './features/search.js';
 
 const routes = { dashboard, 'ai-chat': aiChat, 'ai-study': aiStudy, 'ai-planner': aiPlanner, schedule, tasks, focus, habits, goals, progress, notes, academic, college, auth, settings };
 Object.entries(routes).forEach(([name, route]) => registerRoute(name, route));
@@ -22,15 +23,19 @@ $('closeSidebar').addEventListener('click', closeSidebar);
 $('sidebarBackdrop').addEventListener('click', closeSidebar);
 $('themeButton').addEventListener('click', toggleTheme);
 $('quickFocus').addEventListener('click', () => { navigate('focus'); showToast('Đã mở khu vực Focus.'); });
-$('searchButton').addEventListener('click', () => showToast('Search sẽ được thêm ở Core phase.'));
+$('searchButton').addEventListener('click', () => openSearch());
 $('loginButton').addEventListener('click', () => auth.open('login'));
 $('signupButton').addEventListener('click', () => auth.open('signup'));
 $('settingsBtn').addEventListener('click', () => navigate('settings'));
-$('resetBtn').addEventListener('click', () => { if (!confirm('Đặt lại toàn bộ dữ liệu ScholarOS v2?')) return; resetState(); updateStreak(); showToast('Đã đặt lại dữ liệu.'); navigate('dashboard'); });
+$('resetBtn').addEventListener('click', () => { if (!confirm('Đặt lại toàn bộ dữ liệu ScholarOS v2?')) return; resetState(); updateStreak(); applyTheme(getState().theme); showToast('Đã đặt lại dữ liệu.'); navigate('dashboard'); });
 $('accountButton').addEventListener('click', event => { event.stopPropagation(); toggleAccountMenu(); });
 $('accountSettings').addEventListener('click', () => { closeAccountMenu(); navigate('settings'); });
 $('accountSignout').addEventListener('click', signOutFromMenu);
 document.addEventListener('click', event => { if (!event.target.closest('#accountMenu')) closeAccountMenu(); });
+
+document.addEventListener('keydown', event => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); openSearch(); }
+});
 
 function closeSidebar() { $('sidebar').classList.remove('open'); }
 function updateStreak() { $('streakValue').textContent = getState().streak; }
