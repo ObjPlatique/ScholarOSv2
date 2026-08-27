@@ -10,6 +10,12 @@ export const auth = {
   title: 'Tài khoản',
   description: 'Đăng nhập để đồng bộ dữ liệu ScholarOS riêng tư theo tài khoản của bạn.',
   eyebrow: 'SCHOLAROS ACCOUNT',
+  open(mode = 'login') {
+    authMode = mode === 'signup' ? 'signup' : 'login';
+    authStatus = '';
+    resendEmail = '';
+    navigate('auth');
+  },
   render() {
     return `
       <section class="auth-page">
