@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/tasks.css">
   <link rel="stylesheet" href="css/tools-enhancements.css">
   <link rel="stylesheet" href="css/ai-planner.css">
+  <link rel="stylesheet" href="css/auth.css">
   <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
@@ -33,7 +34,7 @@
     </aside>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <main class="main-content">
-      <header class="top-header"><button class="icon-button mobile-only" id="openSidebar" aria-label="Mở menu">☰</button><div class="header-context"><span class="status-dot"></span><span>ScholarOS v2 Study Core</span></div><div class="header-actions"><button class="header-action" id="searchButton" title="Tìm kiếm"><span>⌕</span><span class="desktop-only">Tìm kiếm</span></button><button class="header-action" id="themeButton" title="Đổi giao diện"><span id="themeIcon">☾</span><span class="desktop-only">Giao diện</span></button></div></header>
+      <header class="top-header"><button class="icon-button mobile-only" id="openSidebar" aria-label="Mở menu">☰</button><div class="header-context"><span class="status-dot"></span><span>ScholarOS v2 Study Core</span></div><div class="header-actions"><button class="header-action" id="searchButton" title="Tìm kiếm"><span>⌕</span><span class="desktop-only">Tìm kiếm</span></button><button class="header-action" data-route="auth" title="Tài khoản"><span>◉</span><span class="desktop-only">Tài khoản</span></button><button class="header-action" id="themeButton" title="Đổi giao diện"><span id="themeIcon">☾</span><span class="desktop-only">Giao diện</span></button></div></header>
       <section class="page-container"><div class="page-heading"><div><p class="eyebrow" id="pageEyebrow">PERSONAL LEARNING SYSTEM</p><h1 id="pageTitle">Dashboard</h1><p id="pageDescription">Tập trung vào việc học quan trọng nhất hôm nay.</p></div><div class="page-heading-actions"><div class="streak-pill">🔥 <strong id="streakValue">0</strong> ngày</div><button class="button primary" id="quickFocus">▶ Bắt đầu Focus</button></div></div><section id="appView" aria-live="polite"></section></section>
     </main>
   </div>
