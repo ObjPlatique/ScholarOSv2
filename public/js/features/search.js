@@ -32,16 +32,14 @@ export function openSearch(initial = '') {
   const move = direction => { const items = [...overlay.querySelectorAll('.search-result')]; if (!items.length) return; let index = items.findIndex(item => item.classList.contains('selected')); index = (index + direction + items.length) % items.length; items.forEach(item => item.classList.remove('selected')); items[index].classList.add('selected'); items[index].scrollIntoView({ block: 'nearest' }); };
   input.addEventListener('input', render);
   input.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); closeSearch(); return; } if (event.key === 'ArrowDown') { event.preventDefault(); move(1); return; } if (event.key === 'ArrowUp') { event.preventDefault(); move(-1); return; } if (event.key === 'Enter') { event.preventDefault(); overlay.querySelector('.search-result.selected')?.click(); } });
-  // Only a click on the actual backdrop closes Search. Every point inside the dialog is safe.
+  // Keep all clicks inside the dialog safe. Only the backdrop and explicit close button close Search.
   overlay.addEventListener('click', event => {
     if (event.target === overlay) { closeSearch(); return; }
     const close = event.target.closest('[data-search-close]');
-    if (close && dialog.contains(close)) { closeSearch(); return; }
+    if (close && dialog.contains(close)) { event.preventDefault(); event.stopPropagation(); closeSearch(); return; }
     const result = event.target.closest('[data-search-route]');
-    if (result && dialog.contains(result)) { const route = result.dataset.searchRoute; closeSearch(); navigate(route); }
+    if (result && dialog.contains(result)) { event.preventDefault(); event.stopPropagation(); const route = result.dataset.searchRoute; closeSearch(); navigate(route); }
   });
-  dialog.addEventListener('click', event => event.stopPropagation());
-  document.addEventListener('keydown', handleGlobalEscape);
   requestAnimationFrame(() => input.focus());
 }
 
