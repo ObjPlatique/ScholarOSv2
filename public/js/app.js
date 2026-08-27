@@ -9,8 +9,9 @@ import { focus, handleFocusAction } from './features/focus.js';
 import { notes, academic, college, handleResourceAction } from './features/resources.js';
 import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=20260822-render-v1';
 import { handlePlannerAction } from './features/ai-planner.js';
+import { auth, handleAuthAction } from './features/auth.js';
 
-const routes = { dashboard, 'ai-chat': aiChat, 'ai-study': aiStudy, 'ai-planner': aiPlanner, schedule, tasks, focus, habits, goals, progress, notes, academic, college };
+const routes = { dashboard, 'ai-chat': aiChat, 'ai-study': aiStudy, 'ai-planner': aiPlanner, schedule, tasks, focus, habits, goals, progress, notes, academic, college, auth };
 Object.entries(routes).forEach(([name, route]) => registerRoute(name, route));
 
 document.getElementById('openSidebar').addEventListener('click', () => document.getElementById('sidebar').classList.add('open'));
@@ -41,6 +42,7 @@ appView.addEventListener('click', event => {
   if (action === 'resource-close-modal' && event.target.closest('.resource-modal') && !event.target.closest('button[data-action="resource-close-modal"]')) return;
   if (action === 'quiz-answer') { window.__scholarQuizAnswer?.(actionTarget); return; }
   if (action === 'ai-optimize-schedule') { handlePlannerAction(actionTarget); return; }
+  if (action?.startsWith('auth-')) { handleAuthAction(action, actionTarget.dataset.id, event, actionTarget); return; }
   if (action?.startsWith('schedule-')) { const r = handleScheduleAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
   if (action?.startsWith('task-')) { const r = handleTaskAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
   if (action?.startsWith('resource-') || /^(note|subject|material|college)-/.test(action)) { const r = handleResourceAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
@@ -51,6 +53,7 @@ appView.addEventListener('click', event => {
 appView.addEventListener('submit', event => {
   const form = event.target.closest('form[data-action]'); if (!form || !appView.contains(form)) return;
   event.preventDefault(); const action = form.dataset.action;
+  if (action?.startsWith('auth-')) { handleAuthAction(action, form.dataset.id, event, form); return; }
   if (action?.startsWith('schedule-')) { const r = handleScheduleAction(action, form.dataset.id, event, form); if (r === 'refresh') renderCurrentRoute(); return; }
   if (action?.startsWith('task-')) { const r = handleTaskAction(action, form.dataset.id, event, form); if (r === 'refresh') renderCurrentRoute(); return; }
   if (action?.startsWith('resource-') || /^(note|subject|material|college)-(create|update)$/.test(action)) { const r = handleResourceAction(action, form.dataset.id, event, form); if (r === 'refresh') renderCurrentRoute(); return; }
