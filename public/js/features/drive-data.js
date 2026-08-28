@@ -22,13 +22,14 @@ function typeFromName(name = '') {
 function fileNameFromPath(path = '') { return String(path).split('/').pop() || path; }
 
 function toMaterial(row, subjectMap) {
-  const subject = subjectMap.get(row.subject_id);
+  const subjectId = String(row.subject_id ?? '');
+  const subject = subjectMap.get(subjectId);
   const name = row.name || fileNameFromPath(row.storage_path);
   return {
     id: `drive-${row.id}`,
     dbId: row.id,
     title: name,
-    subjectId: row.subject_id,
+    subjectId,
     subject: subject?.name || 'Môn học',
     type: typeFromName(name),
     mimeType: row.mime_type || 'application/octet-stream',
@@ -58,27 +59,25 @@ export async function loadDriveFiles() {
     .order('created_at', { ascending: false });
   if (error) throw error;
 
-  const materials = (data || [])
-    .filter(row => subjectMap.has(String(row.subject_id)))
-    .map(row => toMaterial(row, subjectMap));
-
+  const materials = (data || []).map(row => toMaterial(row, subjectMap));
   setState({ materials });
   return materials;
 }
 
 export async function registerUploadedFile({ userId, subjectId, file, storagePath }) {
   const supabase = await getSupabase();
+  const payload = {
+    user_id: userId,
+    subject_id: String(subjectId),
+    name: file.name,
+    storage_bucket: BUCKET,
+    storage_path: storagePath,
+    mime_type: file.type || 'application/octet-stream',
+    file_size: file.size
+  };
   const { data, error } = await supabase
     .from('drive_files')
-    .insert({
-      user_id: userId,
-      subject_id: subjectId,
-      name: file.name,
-      storage_bucket: BUCKET,
-      storage_path: storagePath,
-      mime_type: file.type || 'application/octet-stream',
-      file_size: file.size
-    })
+    .insert(payload)
     .select('id,user_id,subject_id,name,storage_bucket,storage_path,mime_type,file_size,created_at,updated_at')
     .single();
   if (error) throw error;
@@ -100,10 +99,6 @@ export async function deleteDriveFile(file) {
 }
 
 export async function syncDriveFiles() {
-  try {
-    return await loadDriveFiles();
-  } catch (error) {
-    console.warn('[Drive data]', error);
-    return null;
-  }
+  try { return await loadDriveFiles(); }
+  catch (error) { console.warn('[Drive data]', error); return null; }
 }
