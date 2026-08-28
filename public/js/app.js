@@ -63,27 +63,34 @@ function formatFileSize(bytes) { if (!Number.isFinite(bytes) || bytes < 1024) re
 function handleDriveFilter(filterButton) {
   const panel = filterButton.closest('.learning-panel');
   if (!panel) return;
-  const filter = filterButton.dataset.filter || 'all';
+  const label = filterButton.dataset.filter || filterButton.textContent.trim().toLowerCase();
+  const filter = label === 'tất cả' ? 'all' : label === 'pdf' ? 'pdf' : label === 'doc/docx' ? 'doc' : label === 'hình ảnh' ? 'image' : 'all';
   panel.querySelectorAll('.drive-filter').forEach(button => button.classList.toggle('active', button === filterButton));
   panel.querySelectorAll('.drive-card').forEach(card => {
-    const type = (card.dataset.fileType || '').toLowerCase();
+    const type = (card.dataset.fileType || card.querySelector('.drive-card-main p')?.textContent?.split('·')[0] || '').trim().toLowerCase();
+    const normalized = type.replace('docx','doc').replace('jpeg','jpg');
     let visible = true;
-    if (filter === 'pdf') visible = type === 'pdf';
-    if (filter === 'doc') visible = type === 'doc' || type === 'docx';
-    if (filter === 'image') visible = ['png','jpg','jpeg','webp'].includes(type) || type === 'image';
+    if (filter === 'pdf') visible = normalized === 'pdf';
+    if (filter === 'doc') visible = normalized === 'doc';
+    if (filter === 'image') visible = ['png','jpg','webp','jpeg','image'].includes(normalized);
     card.hidden = !visible;
   });
-  const empty = panel.querySelector('.drive-filter-empty');
+  const grid = panel.querySelector('.drive-grid');
   const cards = [...panel.querySelectorAll('.drive-card')];
+  let empty = panel.querySelector('.drive-filter-empty');
   const hasVisible = cards.some(card => !card.hidden);
-  if (empty) empty.hidden = hasVisible;
-  else if (!hasVisible && cards.length) panel.querySelector('.drive-grid')?.insertAdjacentHTML('beforeend', '<div class="drive-filter-empty drive-empty"><strong>Không có tài liệu</strong><p>Không có file thuộc nhóm này trong Drive.</p></div>');
+  if (!hasVisible && cards.length) {
+    if (!empty) { grid?.insertAdjacentHTML('beforeend', '<div class="drive-filter-empty drive-empty"><strong>Không có tài liệu</strong><p>Không có file thuộc nhóm này trong Drive.</p></div>'); empty = panel.querySelector('.drive-filter-empty'); }
+    if (empty) empty.hidden = false;
+  } else if (empty) empty.hidden = true;
 }
 
 const appView = document.getElementById('appView');
 appView.addEventListener('click', event => {
   const routeTarget = event.target.closest('[data-route]');
   if (routeTarget && appView.contains(routeTarget)) { navigate(routeTarget.dataset.route); return; }
+  const driveFilterTarget = event.target.closest('.drive-filter');
+  if (driveFilterTarget && appView.contains(driveFilterTarget)) { handleDriveFilter(driveFilterTarget); return; }
   const actionTarget = event.target.closest('button[data-action], [role="button"][data-action], [data-action="schedule-close-modal"], [data-action="resource-close-modal"]');
   if (!actionTarget || !appView.contains(actionTarget)) return;
   const action = actionTarget.dataset.action;
