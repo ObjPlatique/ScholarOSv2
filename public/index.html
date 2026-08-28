@@ -1,32 +1,37 @@
 <!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScholarOS v2</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="description" content="ScholarOS — hệ thống học tập cá nhân">
+  <title>ScholarOS — Hệ thống học tập cá nhân</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/schedule-fix.css">
+  <link rel="stylesheet" href="css/tasks.css">
+  <link rel="stylesheet" href="css/tools-enhancements.css">
+  <link rel="stylesheet" href="css/drive-preview.css">
+  <link rel="stylesheet" href="css/ai-planner.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header"><strong>ScholarOS</strong><button class="icon-button" id="closeSidebar" aria-label="Đóng menu">×</button></div>
-      <nav class="sidebar-nav" aria-label="Điều hướng">
-        <a href="#dashboard" data-route="dashboard">🏠 Dashboard</a>
-        <a href="#ai-chat" data-route="ai-chat">🤖 AI Chat</a>
-        <a href="#ai-study" data-route="ai-study">📖 Study Assistant</a>
-        <a href="#ai-planner" data-route="ai-planner">🧠 AI Planner</a>
-        <a href="#academic" data-route="academic">📚 Học tập</a>
-        <a href="#schedule" data-route="schedule">🗓️ Lịch học</a>
-        <a href="#tasks" data-route="tasks">✓ Công việc</a>
-        <a href="#focus" data-route="focus">⏱ Focus</a>
-        <a href="#habits" data-route="habits">♻ Thói quen</a>
-        <a href="#goals" data-route="goals">🎯 Mục tiêu</a>
-        <a href="#progress" data-route="progress">📈 Tiến độ</a>
-        <a href="#notes" data-route="notes">📝 Ghi chú</a>
-        <a href="#college" data-route="college">🎓 Đại học</a>
-        <a href="#account" data-route="account">👤 Tài khoản</a>
-        <a href="#settings" data-route="settings">⚙ Cài đặt</a>
+    <aside class="sidebar" id="sidebar" aria-label="Điều hướng ScholarOS">
+      <div class="brand"><div class="brand-mark" aria-hidden="true">S</div><div class="brand-copy"><strong>ScholarOS</strong><span>Personal Learning System</span></div><button class="icon-button mobile-only" id="closeSidebar" aria-label="Đóng menu">×</button></div>
+      <nav class="navigation" id="navigation">
+        <div class="nav-section"><span class="nav-label">TỔNG QUAN</span><button class="nav-item active" data-route="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button></div>
+        <div class="nav-section"><span class="nav-label">AI</span><button class="nav-item" data-route="ai-chat"><span class="nav-icon">✦</span><span>Scholar AI</span><span class="nav-badge">AI</span></button><button class="nav-item" data-route="ai-study"><span class="nav-icon">◇</span><span>Study Assistant</span></button><button class="nav-item" data-route="ai-planner"><span class="nav-icon">⌁</span><span>AI Planner</span></button></div>
+        <div class="nav-section"><span class="nav-label">TOOLS</span><button class="nav-item" data-route="schedule"><span class="nav-icon">▦</span><span>Thời gian biểu</span></button><button class="nav-item" data-route="tasks"><span class="nav-icon">✓</span><span>Nhiệm vụ</span></button><button class="nav-item" data-route="focus"><span class="nav-icon">◷</span><span>Focus</span></button><button class="nav-item" data-route="habits"><span class="nav-icon">◎</span><span>Thói quen</span></button><button class="nav-item" data-route="goals"><span class="nav-icon">⚑</span><span>Mục tiêu</span></button><button class="nav-item" data-route="progress"><span class="nav-icon">◒</span><span>Tiến độ</span></button></div>
+        <div class="nav-section"><span class="nav-label">RESOURCES</span><button class="nav-item" data-route="notes"><span class="nav-icon">▤</span><span>Ghi chú</span></button><button class="nav-item" data-route="academic"><span class="nav-icon">📚</span><span>Học tập</span></button><button class="nav-item" data-route="college"><span class="nav-icon">⌂</span><span>Đại học</span></button></div>
       </nav>
+      <div class="sidebar-footer"><button class="utility-item" id="exportBtn"><span>⇩</span> Xuất dữ liệu</button><label class="utility-item" for="importFile"><span>⇧</span> Nhập dữ liệu<input id="importFile" type="file" accept="application/json,.json" hidden></label><button class="utility-item danger" id="resetBtn"><span>↻</span> Đặt lại dữ liệu</button></div>
     </aside>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <main class="main-content">
