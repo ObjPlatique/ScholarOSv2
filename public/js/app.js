@@ -38,19 +38,10 @@ function formatFileSize(bytes) { if (!Number.isFinite(bytes) || bytes < 1024) re
 // is retained separately in metadata so Vietnamese characters never become part of the key.
 function storageExtension(file) {
   const byName = String(file?.name || '').match(/\.([A-Za-z0-9]+)$/)?.[1]?.toLowerCase();
-  const byType = ({
-    'application/pdf': 'pdf',
-    'application/msword': 'doc',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-    'image/png': 'png',
-    'image/jpeg': 'jpg',
-    'image/webp': 'webp'
-  })[file?.type];
+  const byType = ({ 'application/pdf':'pdf','application/msword':'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'docx','image/png':'png','image/jpeg':'jpg','image/webp':'webp' })[file?.type];
   return (byName || byType || 'bin').replace(/[^a-z0-9]/g, '').slice(0, 8) || 'bin';
 }
 function makeStoragePath(userId, subjectId, file) {
-  // Do not put the original filename or arbitrary subject IDs into the object key.
-  // UUID + fixed extension gives Supabase a conservative, ASCII-safe key every time.
   const objectId = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/[^a-zA-Z0-9-]/g, '');
   const safeUserId = String(userId || '').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 64) || 'user';
   const safeSubjectId = String(subjectId || '').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 64) || 'subject';
@@ -67,40 +58,32 @@ async function handleDriveFileSubmit(form) {
   const state = getState();
   const subject = (state.subjects || []).find(item => item.id === subjectId);
   if (!subject) { showToast('Không tìm thấy môn học.'); return; }
+  window.__scholarActiveSubjectId = subject.id;
   const submit = form.querySelector('button[type="submit"]');
   if (submit) { submit.disabled = true; submit.textContent = 'Đang tải lên…'; }
   try {
     const supabase = await getSupabase();
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) throw new Error('Bạn cần đăng nhập để tải tài liệu lên Drive.');
-
     const bucket = 'scholar-drive';
     const storagePath = makeStoragePath(userData.user.id, subject.id, file);
-    const upload = await supabase.storage.from(bucket).upload(storagePath, file, {
-      cacheControl: '3600',
-      contentType: file.type || 'application/octet-stream',
-      upsert: false
-    });
+    const upload = await supabase.storage.from(bucket).upload(storagePath, file, { cacheControl:'3600', contentType:file.type || 'application/octet-stream', upsert:false });
     if (upload.error) throw upload.error;
 
     const material = {
       id:`material-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
-      title:file.name,
-      subjectId:subject.id,
-      subject:subject.name,
-      type:file.name.split('.').pop()?.toUpperCase() || 'FILE',
-      mimeType:file.type || 'application/octet-stream',
-      size:formatFileSize(file.size),
-      fileSize:file.size,
-      fileName:file.name,
-      storageFileName:storagePath.split('/').pop(),
-      updatedAt:new Date().toISOString().slice(0,10),
-      storageBucket:bucket,
-      storagePath,
-      storageStatus:'uploaded'
+      title:file.name, subjectId:subject.id, subject:subject.name,
+      type:file.name.split('.').pop()?.toUpperCase() || 'FILE', mimeType:file.type || 'application/octet-stream',
+      size:formatFileSize(file.size), fileSize:file.size, fileName:file.name,
+      storageFileName:storagePath.split('/').pop(), updatedAt:new Date().toISOString().slice(0,10),
+      storageBucket:bucket, storagePath, storageStatus:'uploaded'
     };
-    setState({ materials:[...(state.materials || []), material] });
-    form.closest('.resource-modal-backdrop')?.remove();
+
+    const nextMaterials = [...(getState().materials || []), material];
+    setState({ materials: nextMaterials });
+    const persisted = getState().materials?.some(item => item.id === material.id && item.storagePath === storagePath);
+    if (!persisted) throw new Error('Không thể lưu thông tin file vào Drive trên thiết bị.');
+
     renderCurrentRoute();
     showToast(`Đã tải “${file.name}” lên Drive.`);
   } catch (error) {
@@ -134,7 +117,7 @@ appView.addEventListener('click',event=>{
   if(action==='quiz-answer'){window.__scholarQuizAnswer?.(actionTarget);return;} if(action==='ai-optimize-schedule'){handlePlannerAction(actionTarget);return;} if(action==='drive-filter'){handleDriveFilter(actionTarget);return;}
   if(action?.startsWith('auth-')){handleAuthAction(action,actionTarget.dataset.id,event,actionTarget);return;} if(action?.startsWith('schedule-')){const r=handleScheduleAction(action,actionTarget.dataset.id,event,actionTarget);if(r==='refresh')renderCurrentRoute();return;} if(action?.startsWith('task-')){const r=handleTaskAction(action,actionTarget.dataset.id,event,actionTarget);if(r==='refresh')renderCurrentRoute();return;}
   if(action?.startsWith('resource-')||/^(note|subject|material|college)-/.test(action)){const r=handleResourceAction(action,actionTarget.dataset.id,event,actionTarget);if(r==='refresh')renderCurrentRoute();return;}
-  const focusResult=handleFocusAction(action,actionTarget);if(focusResult==='refresh'){renderCurrentRoute();return;} const result=handleAIAction(action,actionTarget.dataset.id,event,actionTarget)||handleToolAction(action,actionTarget.dataset.id,event);if(result==='refresh')renderCurrentRoute();
+  const focusResult=handleFocusAction(action,actionTarget);if(focusResult==='refresh')renderCurrentRoute();const result=handleAIAction(action,actionTarget.dataset.id,event,actionTarget)||handleToolAction(action,actionTarget.dataset.id,event);if(result==='refresh')renderCurrentRoute();
 });
 
 appView.addEventListener('submit',event=>{
