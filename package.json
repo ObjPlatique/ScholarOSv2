@@ -1,9 +1,9 @@
 {
   "name":"scholaros-v2",
-  "version":"2.1.0",
+  "version":"2.1.1",
   "private":true,
   "type":"module",
   "scripts":{"dev":"vercel dev","start":"vercel dev","deploy":"vercel --prod"},
-  "dependencies":{"@google/genai":"latest"},
+  "dependencies":{"@google/genai":"latest","@supabase/supabase-js":"latest"},
   "devDependencies":{"vercel":"latest"}
 }
