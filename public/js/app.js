@@ -60,6 +60,26 @@ function handleDriveFileSubmit(form) {
 }
 function formatFileSize(bytes) { if (!Number.isFinite(bytes) || bytes < 1024) return `${bytes || 0} B`; const units=['KB','MB','GB']; let value=bytes/1024, i=0; while(value>=1024 && i<units.length-1){value/=1024;i++;} return `${value.toFixed(value>=10?0:1)} ${units[i]}`; }
 
+function handleDriveFilter(filterButton) {
+  const panel = filterButton.closest('.learning-panel');
+  if (!panel) return;
+  const filter = filterButton.dataset.filter || 'all';
+  panel.querySelectorAll('.drive-filter').forEach(button => button.classList.toggle('active', button === filterButton));
+  panel.querySelectorAll('.drive-card').forEach(card => {
+    const type = (card.dataset.fileType || '').toLowerCase();
+    let visible = true;
+    if (filter === 'pdf') visible = type === 'pdf';
+    if (filter === 'doc') visible = type === 'doc' || type === 'docx';
+    if (filter === 'image') visible = ['png','jpg','jpeg','webp'].includes(type) || type === 'image';
+    card.hidden = !visible;
+  });
+  const empty = panel.querySelector('.drive-filter-empty');
+  const cards = [...panel.querySelectorAll('.drive-card')];
+  const hasVisible = cards.some(card => !card.hidden);
+  if (empty) empty.hidden = hasVisible;
+  else if (!hasVisible && cards.length) panel.querySelector('.drive-grid')?.insertAdjacentHTML('beforeend', '<div class="drive-filter-empty drive-empty"><strong>Không có tài liệu</strong><p>Không có file thuộc nhóm này trong Drive.</p></div>');
+}
+
 const appView = document.getElementById('appView');
 appView.addEventListener('click', event => {
   const routeTarget = event.target.closest('[data-route]');
@@ -72,6 +92,7 @@ appView.addEventListener('click', event => {
   if (action === 'resource-close-modal' && event.target.closest('.resource-modal') && !event.target.closest('button[data-action="resource-close-modal"]')) return;
   if (action === 'quiz-answer') { window.__scholarQuizAnswer?.(actionTarget); return; }
   if (action === 'ai-optimize-schedule') { handlePlannerAction(actionTarget); return; }
+  if (action === 'drive-filter') { handleDriveFilter(actionTarget); return; }
   if (action?.startsWith('auth-')) { handleAuthAction(action, actionTarget.dataset.id, event, actionTarget); return; }
   if (action?.startsWith('schedule-')) { const r = handleScheduleAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
   if (action?.startsWith('task-')) { const r = handleTaskAction(action, actionTarget.dataset.id, event, actionTarget); if (r === 'refresh') renderCurrentRoute(); return; }
