@@ -33,7 +33,24 @@ function showToast(message) { const el = document.getElementById('toast'); el.te
 function exportData() { const blob = new Blob([exportState()], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `scholaros-v2-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); showToast('Đã xuất dữ liệu ScholarOS.'); }
 function importData(event) { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { importState(JSON.parse(reader.result)); updateStreak(); navigate('dashboard'); showToast('Đã nhập dữ liệu ScholarOS.'); } catch (err) { showToast(err.message || 'Không thể nhập dữ liệu.'); } }; reader.readAsText(file); event.target.value = ''; }
 function formatFileSize(bytes) { if (!Number.isFinite(bytes) || bytes < 1024) return `${bytes || 0} B`; const units=['KB','MB','GB']; let value=bytes/1024, i=0; while(value>=1024 && i<units.length-1){value/=1024;i++;} return `${value.toFixed(value>=10?0:1)} ${units[i]}`; }
-function safeFileName(name) { return String(name || 'file').normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,160) || 'file'; }
+
+// Supabase Storage only accepts the documented ASCII-safe object-key characters.
+// Keep the original filename in metadata/UI, but use a normalized ASCII key in Storage.
+function safeFileName(name) {
+  const raw = String(name || 'file').normalize('NFKC');
+  const extMatch = raw.match(/\.([^.]+)$/);
+  const ext = extMatch ? extMatch[1].toLowerCase().replace(/[^a-z0-9]+/g, '') : '';
+  const base = extMatch ? raw.slice(0, -extMatch[0].length) : raw;
+  const ascii = base
+    .replace(/[Đđ]/g, c => c === 'Đ' ? 'D' : 'd')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 140) || 'file';
+  return `${ascii}.${ext || 'bin'}`;
+}
 
 async function handleDriveFileSubmit(form) {
   const file = form.querySelector('input[name="file"]')?.files?.[0];
@@ -51,12 +68,33 @@ async function handleDriveFileSubmit(form) {
     const supabase = await getSupabase();
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) throw new Error('Bạn cần đăng nhập để tải tài liệu lên Drive.');
-    const bucket = 'resources';
+
+    const bucket = 'scholar-drive';
     const fileName = safeFileName(file.name);
     const storagePath = `${userData.user.id}/${subject.id}/${Date.now()}-${fileName}`;
-    const upload = await supabase.storage.from(bucket).upload(storagePath, file, { cacheControl:'3600', contentType:file.type || 'application/octet-stream', upsert:false });
+    const upload = await supabase.storage.from(bucket).upload(storagePath, file, {
+      cacheControl: '3600',
+      contentType: file.type || 'application/octet-stream',
+      upsert: false
+    });
     if (upload.error) throw upload.error;
-    const material = { id:`material-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, title:file.name, subjectId:subject.id, subject:subject.name, type:file.name.split('.').pop()?.toUpperCase() || 'FILE', mimeType:file.type || 'application/octet-stream', size:formatFileSize(file.size), fileSize:file.size, fileName:file.name, updatedAt:new Date().toISOString().slice(0,10), storageBucket:bucket, storagePath, storageStatus:'uploaded' };
+
+    const material = {
+      id:`material-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+      title:file.name,
+      subjectId:subject.id,
+      subject:subject.name,
+      type:file.name.split('.').pop()?.toUpperCase() || 'FILE',
+      mimeType:file.type || 'application/octet-stream',
+      size:formatFileSize(file.size),
+      fileSize:file.size,
+      fileName:file.name,
+      storageFileName:fileName,
+      updatedAt:new Date().toISOString().slice(0,10),
+      storageBucket:bucket,
+      storagePath,
+      storageStatus:'uploaded'
+    };
     setState({ materials:[...(state.materials || []), material] });
     form.closest('.resource-modal-backdrop')?.remove();
     renderCurrentRoute();
@@ -64,8 +102,9 @@ async function handleDriveFileSubmit(form) {
   } catch (error) {
     console.error('[Drive upload]', error);
     const message=error?.message || 'Không thể tải file lên Drive.';
-    if (/bucket|not found|404/i.test(message)) showToast('Không tìm thấy Storage bucket “resources”.');
+    if (/bucket|not found|404/i.test(message)) showToast('Không tìm thấy Storage bucket “scholar-drive”.');
     else if (/row-level|policy|permission|not authorized|403/i.test(message)) showToast('Storage Policy không cho phép tải file lên Drive.');
+    else if (/invalid key/i.test(message)) showToast('Tên file không hợp lệ với Supabase Storage. Hãy thử lại — ScholarOS sẽ tự tạo tên lưu trữ an toàn.');
     else showToast(message);
   } finally { if (submit) { submit.disabled=false; submit.textContent='Thêm vào Drive'; } }
 }
