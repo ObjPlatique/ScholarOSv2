@@ -11,6 +11,7 @@ import { aiChat, aiStudy, aiPlanner, handleAIAction } from './features/ai.js?v=2
 import { handlePlannerAction } from './features/ai-planner.js';
 import { auth, handleAuthAction } from './features/auth.js';
 import { getSupabase } from './core/supabase.js';
+import { registerUploadedFile, loadDriveFiles } from './features/drive-data.js';
 
 const routes = { dashboard, 'ai-chat': aiChat, 'ai-study': aiStudy, 'ai-planner': aiPlanner, schedule, tasks, focus, habits, goals, progress, notes, academic, college, auth };
 Object.entries(routes).forEach(([name, route]) => registerRoute(name, route));
@@ -34,8 +35,6 @@ function exportData() { const blob = new Blob([exportState()], { type: 'applicat
 function importData(event) { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { importState(JSON.parse(reader.result)); updateStreak(); navigate('dashboard'); showToast('Đã nhập dữ liệu ScholarOS.'); } catch (err) { showToast(err.message || 'Không thể nhập dữ liệu.'); } }; reader.readAsText(file); event.target.value = ''; }
 function formatFileSize(bytes) { if (!Number.isFinite(bytes) || bytes < 1024) return `${bytes || 0} B`; const units=['KB','MB','GB']; let value=bytes/1024, i=0; while(value>=1024 && i<units.length-1){value/=1024;i++;} return `${value.toFixed(value>=10?0:1)} ${units[i]}`; }
 
-// Storage object keys are deliberately opaque and ASCII-only. The original filename
-// is retained separately in metadata so Vietnamese characters never become part of the key.
 function storageExtension(file) {
   const byName = String(file?.name || '').match(/\.([A-Za-z0-9]+)$/)?.[1]?.toLowerCase();
   const byType = ({ 'application/pdf':'pdf','application/msword':'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'docx','image/png':'png','image/jpeg':'jpg','image/webp':'webp' })[file?.type];
@@ -61,37 +60,37 @@ async function handleDriveFileSubmit(form) {
   window.__scholarActiveSubjectId = subject.id;
   const submit = form.querySelector('button[type="submit"]');
   if (submit) { submit.disabled = true; submit.textContent = 'Đang tải lên…'; }
+  let uploadedPath = null;
   try {
     const supabase = await getSupabase();
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) throw new Error('Bạn cần đăng nhập để tải tài liệu lên Drive.');
     const bucket = 'scholar-drive';
     const storagePath = makeStoragePath(userData.user.id, subject.id, file);
+    uploadedPath = storagePath;
     const upload = await supabase.storage.from(bucket).upload(storagePath, file, { cacheControl:'3600', contentType:file.type || 'application/octet-stream', upsert:false });
     if (upload.error) throw upload.error;
 
-    const material = {
-      id:`material-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
-      title:file.name, subjectId:subject.id, subject:subject.name,
-      type:file.name.split('.').pop()?.toUpperCase() || 'FILE', mimeType:file.type || 'application/octet-stream',
-      size:formatFileSize(file.size), fileSize:file.size, fileName:file.name,
-      storageFileName:storagePath.split('/').pop(), updatedAt:new Date().toISOString().slice(0,10),
-      storageBucket:bucket, storagePath, storageStatus:'uploaded'
-    };
+    try {
+      await registerUploadedFile({ userId: userData.user.id, subjectId: subject.id, file, storagePath });
+    } catch (dbError) {
+      await supabase.storage.from(bucket).remove([storagePath]).catch(() => {});
+      throw new Error(`File đã tải lên Storage nhưng chưa thể đăng ký vào Drive: ${dbError?.message || 'lỗi database'}`);
+    }
 
-    const nextMaterials = [...(getState().materials || []), material];
-    setState({ materials: nextMaterials });
-    const persisted = getState().materials?.some(item => item.id === material.id && item.storagePath === storagePath);
-    if (!persisted) throw new Error('Không thể lưu thông tin file vào Drive trên thiết bị.');
-
+    const materials = await loadDriveFiles();
+    if (!materials.some(item => item.storagePath === storagePath)) {
+      throw new Error('Đã tải file nhưng Drive chưa đọc được metadata vừa tạo.');
+    }
+    window.__scholarActiveSubjectId = subject.id;
     renderCurrentRoute();
     showToast(`Đã tải “${file.name}” lên Drive.`);
   } catch (error) {
     console.error('[Drive upload]', error);
     const message=error?.message || 'Không thể tải file lên Drive.';
     if (/bucket|not found|404/i.test(message)) showToast('Không tìm thấy Storage bucket “scholar-drive”.');
-    else if (/row-level|policy|permission|not authorized|403/i.test(message)) showToast('Storage Policy không cho phép tải file lên Drive.');
-    else if (/invalid key/i.test(message)) showToast('Storage từ chối object key. Phiên bản này đã chuyển sang key UUID an toàn; hãy tải lại trang rồi thử lại.');
+    else if (/row-level|policy|permission|not authorized|403/i.test(message)) showToast('Storage/Database Policy không cho phép thao tác Drive.');
+    else if (/invalid key/i.test(message)) showToast('Storage từ chối object key. Hãy tải lại trang rồi thử lại.');
     else showToast(message);
   } finally { if (submit) { submit.disabled=false; submit.textContent='Thêm vào Drive'; } }
 }
