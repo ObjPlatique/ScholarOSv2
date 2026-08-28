@@ -33,7 +33,7 @@ function updateStreak() { document.getElementById('streakValue').textContent = g
 function showToast(message) { const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show'); clearTimeout(window.__toast); window.__toast = setTimeout(() => el.classList.remove('show'), 3000); }
 function exportData() { const blob = new Blob([exportState()], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `scholaros-v2-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url); showToast('Đã xuất dữ liệu ScholarOS.'); }
 function importData(event) { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { importState(JSON.parse(reader.result)); updateStreak(); navigate('dashboard'); showToast('Đã nhập dữ liệu ScholarOS.'); } catch (err) { showToast(err.message || 'Không thể nhập dữ liệu.'); } }; reader.readAsText(file); event.target.value = ''; }
-function formatFileSize(bytes) { if (!Number.isFinite(bytes) || bytes < 1024) return `${bytes || 0} B`; const units=['KB','MB','GB']; let value=bytes/1024, i=0; while(value>=1024 && i<units.length-1){value/=1024;i++;} return `${value.toFixed(value>=10?0:1)} ${units[i]}`; }
+function formatFileSize(bytes) { if (!Number.isFinite(bytes) || bytes < 1024) return `${bytes || 0} B`; const units=['KB','MB','GB']; let value=bytes/1024, i=0; while(value>=1024&&i<units.length-1){value/=1024;i++;} return `${value.toFixed(value>=10?0:1)} ${units[i]}`; }
 
 function storageExtension(file) {
   const byName = String(file?.name || '').match(/\.([A-Za-z0-9]+)$/)?.[1]?.toLowerCase();
@@ -47,6 +47,26 @@ function makeStoragePath(userId, subjectId, file) {
   return `${safeUserId}/${safeSubjectId}/${objectId}.${storageExtension(file)}`;
 }
 
+function restoreActiveSubject(subjectId) {
+  if (!subjectId) return;
+  requestAnimationFrame(() => {
+    const selectorId = CSS.escape(String(subjectId));
+    const tab = document.querySelector(`.subject-tab[data-id="${selectorId}"]`);
+    const panel = document.querySelector(`.learning-panel[data-subject-panel="${selectorId}"]`);
+    if (!tab || !panel) return;
+    document.querySelectorAll('.subject-tab[data-id]').forEach(el => {
+      const active = el === tab;
+      el.classList.toggle('active', active);
+      el.setAttribute('aria-selected', String(active));
+    });
+    document.querySelectorAll('.learning-panel[data-subject-panel]').forEach(el => {
+      const active = el === panel;
+      el.classList.toggle('active', active);
+      el.hidden = !active;
+    });
+  });
+}
+
 async function handleDriveFileSubmit(form) {
   const file = form.querySelector('input[name="file"]')?.files?.[0];
   const subjectId = form.dataset.id;
@@ -55,19 +75,17 @@ async function handleDriveFileSubmit(form) {
   if (!allowed) { showToast('Định dạng chưa được hỗ trợ.'); return; }
   if (file.size > 50 * 1024 * 1024) { showToast('File quá lớn. Giới hạn Drive hiện tại là 50 MB.'); return; }
   const state = getState();
-  const subject = (state.subjects || []).find(item => item.id === subjectId);
+  const subject = (state.subjects || []).find(item => String(item.id) === String(subjectId));
   if (!subject) { showToast('Không tìm thấy môn học.'); return; }
-  window.__scholarActiveSubjectId = subject.id;
+  window.__scholarActiveSubjectId = String(subject.id);
   const submit = form.querySelector('button[type="submit"]');
   if (submit) { submit.disabled = true; submit.textContent = 'Đang tải lên…'; }
-  let uploadedPath = null;
   try {
     const supabase = await getSupabase();
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) throw new Error('Bạn cần đăng nhập để tải tài liệu lên Drive.');
     const bucket = 'scholar-drive';
     const storagePath = makeStoragePath(userData.user.id, subject.id, file);
-    uploadedPath = storagePath;
     const upload = await supabase.storage.from(bucket).upload(storagePath, file, { cacheControl:'3600', contentType:file.type || 'application/octet-stream', upsert:false });
     if (upload.error) throw upload.error;
 
@@ -75,15 +93,17 @@ async function handleDriveFileSubmit(form) {
       await registerUploadedFile({ userId: userData.user.id, subjectId: subject.id, file, storagePath });
     } catch (dbError) {
       await supabase.storage.from(bucket).remove([storagePath]).catch(() => {});
-      throw new Error(`File đã tải lên Storage nhưng chưa thể đăng ký vào Drive: ${dbError?.message || 'lỗi database'}`);
+      const detail = [dbError?.message, dbError?.details, dbError?.hint].filter(Boolean).join(' — ');
+      throw new Error(`File đã tải lên Storage nhưng chưa thể đăng ký vào Drive${detail ? `: ${detail}` : '.'}`);
     }
 
     const materials = await loadDriveFiles();
     if (!materials.some(item => item.storagePath === storagePath)) {
       throw new Error('Đã tải file nhưng Drive chưa đọc được metadata vừa tạo.');
     }
-    window.__scholarActiveSubjectId = subject.id;
+    window.__scholarActiveSubjectId = String(subject.id);
     renderCurrentRoute();
+    restoreActiveSubject(subject.id);
     showToast(`Đã tải “${file.name}” lên Drive.`);
   } catch (error) {
     console.error('[Drive upload]', error);
