@@ -1,4 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+// This project ships native browser ES modules without a bundler.
+// Browsers cannot resolve a bare npm specifier such as "@supabase/supabase-js",
+// so load the ESM build from a browser-compatible CDN.
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 let clientPromise;
 const DRIVE_BUCKET = 'scholar-drive';
