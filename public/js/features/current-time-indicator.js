@@ -4,6 +4,8 @@
   const START_MINUTE = 7 * 60;
   const END_MINUTE = 22 * 60;
   let timer = null;
+  let observer = null;
+  let updating = false;
 
   function getTodayColumn() {
     const app = document.getElementById('appView');
@@ -28,24 +30,33 @@
   }
 
   function update() {
-    const column = getTodayColumn();
-    document.querySelectorAll('.schedule-current-time-indicator').forEach(el => el.remove());
-    if (!column) return;
-    const now = new Date();
-    const minutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-    if (minutes < START_MINUTE || minutes > END_MINUTE) return;
-    const hourLines = [...column.querySelectorAll('.schedule-hour-line')];
-    let hourHeight = HOUR_HEIGHT_FALLBACK;
-    if (hourLines.length > 1) hourHeight = Math.max(1, hourLines[1].getBoundingClientRect().top - hourLines[0].getBoundingClientRect().top);
-    const indicator = document.createElement('div');
-    indicator.className = 'schedule-current-time-indicator';
-    indicator.style.top = `${(minutes - START_MINUTE) / 60 * hourHeight}px`;
-    const label = document.createElement('span');
-    label.className = 'schedule-current-time-label';
-    label.textContent = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
-    indicator.appendChild(label);
-    column.style.position = 'relative';
-    column.appendChild(indicator);
+    if (updating) return;
+    updating = true;
+    observer?.disconnect();
+    try {
+      const app = document.getElementById('appView');
+      app?.querySelectorAll('.schedule-current-time-indicator').forEach(el => el.remove());
+      const column = getTodayColumn();
+      if (!column) return;
+      const now = new Date();
+      const minutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+      if (minutes < START_MINUTE || minutes > END_MINUTE) return;
+      const hourLines = [...column.querySelectorAll('.schedule-hour-line')];
+      let hourHeight = HOUR_HEIGHT_FALLBACK;
+      if (hourLines.length > 1) hourHeight = Math.max(1, hourLines[1].getBoundingClientRect().top - hourLines[0].getBoundingClientRect().top);
+      const indicator = document.createElement('div');
+      indicator.className = 'schedule-current-time-indicator';
+      indicator.style.top = `${(minutes - START_MINUTE) / 60 * hourHeight}px`;
+      const label = document.createElement('span');
+      label.className = 'schedule-current-time-label';
+      label.textContent = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+      indicator.appendChild(label);
+      column.style.position = 'relative';
+      column.appendChild(indicator);
+    } finally {
+      updating = false;
+      if (observer) observer.observe(document.getElementById('appView'), { childList: true, subtree: true });
+    }
   }
 
   function start() {
@@ -57,7 +68,8 @@
 
   const app = document.getElementById('appView');
   if (!app) return;
-  new MutationObserver(update).observe(app, { childList: true, subtree: true });
+  observer = new MutationObserver(() => { if (!updating) update(); });
+  observer.observe(app, { childList: true, subtree: true });
   window.addEventListener('hashchange', update);
   window.addEventListener('resize', update);
   start();
