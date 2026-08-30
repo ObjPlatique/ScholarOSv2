@@ -13,7 +13,7 @@ import { auth, handleAuthAction } from './features/auth.js';
 import { settings, handleSettingsAction } from './features/settings.js';
 import { getSupabase } from './core/supabase.js';
 import { registerUploadedFile, loadDriveFiles } from './features/drive-data.js';
-import { initCloudPersistence } from './core/cloud-persistence.js';
+import { initCloudPersistence } from './core/cloud-persistence-v2.js';
 
 const routes = { dashboard, 'ai-chat': aiChat, 'ai-study': aiStudy, 'ai-planner': aiPlanner, schedule, tasks, focus, habits, goals, progress, notes, academic, college, auth, settings };
 Object.entries(routes).forEach(([name, route]) => registerRoute(name, route));
