@@ -105,26 +105,37 @@ export async function handleSettingsAction(action, event, target) {
   } catch (error) { notify(error.message || 'Không thể cập nhật cài đặt.'); }
 }
 
+async function verifyEmailBeforeDestructiveAction() {
+  const supabase = await getSupabase();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) throw new Error('Bạn cần đăng nhập.');
+  const email = String(userData.user.email || '').trim();
+  if (!email) throw new Error('Tài khoản chưa có email để xác minh.');
+  if (!userData.user.email_confirmed_at) throw new Error('Email tài khoản chưa được xác minh. Hãy xác minh email trước.');
+
+  const { error: sendError } = await supabase.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: false }
+  });
+  if (sendError) throw sendError;
+
+  const token = prompt(`Mã xác minh đã được gửi tới ${email}.\n\nNhập mã OTP để tiếp tục:`);
+  if (!token) throw new Error('Đã hủy xác minh email.');
+  const { data: verified, error: verifyError } = await supabase.auth.verifyOtp({ email, token: token.trim(), type: 'email' });
+  if (verifyError) throw verifyError;
+  if (!verified?.session?.access_token) throw new Error('Xác minh email chưa hoàn tất.');
+  return verified.session.access_token;
+}
+
 async function deleteData() {
   if (!confirm('Xóa toàn bộ dữ liệu học tập và tài liệu Drive? Tài khoản sẽ không bị xóa.')) return;
   try {
-    const supabase = await getSupabase();
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user) throw new Error('Bạn cần đăng nhập.');
-    const userId = userData.user.id;
-    const { data: files, error: filesError } = await supabase.from('drive_files').select('storage_path').eq('user_id', userId);
-    if (filesError) throw filesError;
-    const paths = (files || []).map(row => row.storage_path).filter(Boolean);
-    if (paths.length) {
-      const { error: storageError } = await supabase.storage.from('scholar-drive').remove(paths);
-      if (storageError) throw storageError;
-    }
-    const { error: driveError } = await supabase.from('drive_files').delete().eq('user_id', userId);
-    if (driveError) throw driveError;
-    const { error: stateError } = await supabase.from('user_state').delete().eq('user_id', userId);
-    if (stateError) throw stateError;
+    const token = await verifyEmailBeforeDestructiveAction();
+    const response = await fetch('/api/data-delete', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || 'Không thể xóa dữ liệu.');
     clearLocalStateAfterCloudDeletion();
-    notify('Đã xóa toàn bộ dữ liệu.');
+    notify('Đã xóa toàn bộ dữ liệu và đặt lại ScholarOS.');
     navigate('dashboard');
   } catch (error) { notify(error.message || 'Không thể xóa dữ liệu.'); }
 }
@@ -135,18 +146,22 @@ async function deleteAccount() {
   const second = prompt('Nhập XOA TAI KHOAN để xác nhận:');
   if (second !== 'XOA TAI KHOAN') return notify('Đã hủy xóa tài khoản.');
   try {
-    const supabase = await getSupabase();
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData?.session?.access_token;
-    if (!token) throw new Error('Phiên đăng nhập đã hết hạn.');
-    const response = await fetch('/api/account-delete', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    const token = await verifyEmailBeforeDestructiveAction();
+    const response = await fetch('/api/account-delete', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || 'Không thể xóa tài khoản.');
     localStorage.clear();
-    await supabase.auth.signOut();
+    await supabaseSignOutLocal();
     window.location.hash = '#auth';
     window.location.reload();
   } catch (error) { notify(error.message || 'Không thể xóa tài khoản.'); }
+}
+
+async function supabaseSignOutLocal() {
+  try {
+    const supabase = await getSupabase();
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch {}
 }
 
 function notify(message) { const toast = document.getElementById('toast'); if (!toast) return; toast.textContent = message; toast.classList.add('show'); clearTimeout(window.__toast); window.__toast = setTimeout(() => toast.classList.remove('show'), 3500); }
