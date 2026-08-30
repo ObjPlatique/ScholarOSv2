@@ -13,19 +13,30 @@ export default async function handler(req, res) {
     const userClient = createClient(url, anonKey || serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: { user }, error: userError } = await userClient.auth.getUser(token);
     if (userError || !user) return res.status(401).json({ error: 'Phiên đăng nhập không hợp lệ.' });
+    if (!user.email_confirmed_at) return res.status(403).json({ error: 'Email của tài khoản chưa được xác minh.' });
+
     const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-    const { data: files, error: filesError } = await admin.from('drive_files').select('storage_path').eq('user_id', user.id);
+    const { data: files, error: filesError } = await admin.from('drive_files').select('storage_path,storage_bucket').eq('user_id', user.id);
     if (filesError) throw filesError;
-    const paths = (files || []).map(row => row.storage_path).filter(Boolean);
-    if (paths.length) {
-      const { error: storageError } = await admin.storage.from('scholar-drive').remove(paths);
-      if (storageError) throw storageError;
+    const byBucket = new Map();
+    for (const row of files || []) {
+      const bucket = row.storage_bucket || 'scholar-drive';
+      if (!row.storage_path) continue;
+      const list = byBucket.get(bucket) || [];
+      list.push(row.storage_path);
+      byBucket.set(bucket, list);
     }
+    for (const [bucket, paths] of byBucket) {
+      const { error } = await admin.storage.from(bucket).remove(paths);
+      if (error) throw error;
+    }
+
     const { error: driveError } = await admin.from('drive_files').delete().eq('user_id', user.id);
     if (driveError) throw driveError;
     const { error: stateError } = await admin.from('user_state').delete().eq('user_id', user.id);
     if (stateError) throw stateError;
-    const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
+
+    const { error: deleteError } = await admin.auth.admin.deleteUser(user.id, false);
     if (deleteError) throw deleteError;
     return res.status(200).json({ ok: true });
   } catch (error) {
