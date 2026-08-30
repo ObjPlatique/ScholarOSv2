@@ -1,4 +1,4 @@
-import { getState, setState, subscribe } from './store.js';
+import { getState, setState, resetState, subscribe } from './store.js';
 import { getSupabase } from './supabase.js';
 
 const CLOUD_TABLE = 'user_state';
@@ -13,7 +13,7 @@ let authListenerBound = false;
 const cloneState = () => JSON.parse(JSON.stringify(getState()));
 const emit = (status, extra = {}) => window.dispatchEvent(new CustomEvent('scholaros:persistence', { detail: { status, ...extra } }));
 
-function stop() {
+function stop({ resetLocal = false } = {}) {
   enabled = false;
   activeUserId = null;
   syncing = false;
@@ -22,6 +22,7 @@ function stop() {
   saveTimer = null;
   unsubscribeStore?.();
   unsubscribeStore = null;
+  if (resetLocal) resetState();
 }
 
 async function persist(snapshot, revision, userId) {
@@ -52,7 +53,7 @@ function scheduleSave() {
 
 async function hydrate(user) {
   if (!user?.id) {
-    stop();
+    stop({ resetLocal: true });
     emit('signed-out');
     return { signedIn: false };
   }
@@ -101,13 +102,14 @@ export async function initCloudPersistence() {
         if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
           setTimeout(() => { void hydrate(session?.user); }, 0);
         } else if (event === 'SIGNED_OUT') {
-          stop();
+          stop({ resetLocal: true });
           emit('signed-out');
         }
       });
     }
     const { data, error } = await supabase.auth.getUser();
     if (error || !data?.user) {
+      stop({ resetLocal: true });
       emit('signed-out');
       return { signedIn: false };
     }
