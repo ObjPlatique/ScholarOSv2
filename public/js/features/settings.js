@@ -1,6 +1,6 @@
 import { navigate } from '../core/router.js';
 import { getSupabase } from '../core/supabase.js';
-import { resetState } from '../core/store.js';
+import { clearLocalStateAfterCloudDeletion } from '../core/cloud-persistence-v2.js';
 
 export const settings = {
   title: 'Cài đặt',
@@ -115,13 +115,15 @@ async function deleteData() {
     const { data: files, error: filesError } = await supabase.from('drive_files').select('storage_path').eq('user_id', userId);
     if (filesError) throw filesError;
     const paths = (files || []).map(row => row.storage_path).filter(Boolean);
-    if (paths.length) await supabase.storage.from('scholar-drive').remove(paths);
+    if (paths.length) {
+      const { error: storageError } = await supabase.storage.from('scholar-drive').remove(paths);
+      if (storageError) throw storageError;
+    }
     const { error: driveError } = await supabase.from('drive_files').delete().eq('user_id', userId);
     if (driveError) throw driveError;
     const { error: stateError } = await supabase.from('user_state').delete().eq('user_id', userId);
     if (stateError) throw stateError;
-    resetState();
-    localStorage.removeItem('scholaros.v2.state');
+    clearLocalStateAfterCloudDeletion();
     notify('Đã xóa toàn bộ dữ liệu.');
     navigate('dashboard');
   } catch (error) { notify(error.message || 'Không thể xóa dữ liệu.'); }
