@@ -30,6 +30,12 @@ document.getElementById('accountButton').addEventListener('click', toggleAccount
 document.getElementById('accountSettings').addEventListener('click', () => { closeAccountDropdown(); navigate('settings'); });
 document.getElementById('accountSignout').addEventListener('click', signOutFromMenu);
 document.addEventListener('click', event => { if (!event.target.closest('#accountMenu')) closeAccountDropdown(); });
+window.addEventListener('scholaros:persistence', event => {
+  if (event.detail?.status === 'synced') {
+    updateStreak();
+    renderCurrentRoute();
+  }
+});
 
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); }
 function updateStreak() { document.getElementById('streakValue').textContent = getState().streak; }
