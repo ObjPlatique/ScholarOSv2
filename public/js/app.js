@@ -2,7 +2,7 @@ import { initRouter, navigate, registerRoute } from './core/router.js';
 import { getState, resetState, exportState, importState, setState } from './core/store.js';
 import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
-import { schedule as legacySchedule, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { habits, goals, progress, handleToolAction } from './features/tools.js';
 import { tasks, handleTaskAction } from './features/tasks.js';
 import { schedule, handleScheduleAction } from './features/schedule.js';
 import { focus, handleFocusAction } from './features/focus.js';
@@ -47,7 +47,6 @@ function makeStoragePath(userId, subjectId, file) {
   const safeSubjectId = String(subjectId || '').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 64) || 'subject';
   return `${safeUserId}/${safeSubjectId}/${objectId}.${storageExtension(file)}`;
 }
-
 function restoreActiveSubject(subjectId) {
   if (!subjectId) return;
   requestAnimationFrame(() => {
@@ -55,16 +54,8 @@ function restoreActiveSubject(subjectId) {
     const tab = document.querySelector(`.subject-tab[data-id="${selectorId}"]`);
     const panel = document.querySelector(`.learning-panel[data-subject-panel="${selectorId}"]`);
     if (!tab || !panel) return;
-    document.querySelectorAll('.subject-tab[data-id]').forEach(el => {
-      const active = el === tab;
-      el.classList.toggle('active', active);
-      el.setAttribute('aria-selected', String(active));
-    });
-    document.querySelectorAll('.learning-panel[data-subject-panel]').forEach(el => {
-      const active = el === panel;
-      el.classList.toggle('active', active);
-      el.hidden = !active;
-    });
+    document.querySelectorAll('.subject-tab[data-id]').forEach(el => { const active = el === tab; el.classList.toggle('active', active); el.setAttribute('aria-selected', String(active)); });
+    document.querySelectorAll('.learning-panel[data-subject-panel]').forEach(el => { const active = el === panel; el.classList.toggle('active', active); el.hidden = !active; });
   });
 }
 
@@ -89,7 +80,6 @@ async function handleDriveFileSubmit(form) {
     const storagePath = makeStoragePath(userData.user.id, subject.id, file);
     const upload = await supabase.storage.from(bucket).upload(storagePath, file, { cacheControl:'3600', contentType:file.type || 'application/octet-stream', upsert:false });
     if (upload.error) throw upload.error;
-
     try {
       await registerUploadedFile({ userId: userData.user.id, subjectId: subject.id, file, storagePath });
     } catch (dbError) {
@@ -97,11 +87,8 @@ async function handleDriveFileSubmit(form) {
       const detail = [dbError?.message, dbError?.details, dbError?.hint].filter(Boolean).join(' — ');
       throw new Error(`File đã tải lên Storage nhưng chưa thể đăng ký vào Drive${detail ? `: ${detail}` : '.'}`);
     }
-
     const materials = await loadDriveFiles();
-    if (!materials.some(item => item.storagePath === storagePath)) {
-      throw new Error('Đã tải file nhưng Drive chưa đọc được metadata vừa tạo.');
-    }
+    if (!materials.some(item => item.storagePath === storagePath)) throw new Error('Đã tải file nhưng Drive chưa đọc được metadata vừa tạo.');
     window.__scholarActiveSubjectId = String(subject.id);
     renderCurrentRoute();
     restoreActiveSubject(subject.id);
@@ -130,8 +117,7 @@ const appView=document.getElementById('appView');
 appView.addEventListener('click',event=>{
   const routeTarget=event.target.closest('[data-route]'); if(routeTarget&&appView.contains(routeTarget)){navigate(routeTarget.dataset.route);return;}
   const driveFilterTarget=event.target.closest('.drive-filter'); if(driveFilterTarget&&appView.contains(driveFilterTarget)){handleDriveFilter(driveFilterTarget);return;}
-  const actionTarget=event.target.closest('button[data-action], [role="button"][data-action], [data-action="schedule-close-modal"], [data-action="resource-close-modal"]'); if(!actionTarget||!appView.contains(actionTarget))return;
-  const action=actionTarget.dataset.action; event.stopPropagation();
+  const actionTarget=event.target.closest('button[data-action], [role="button"][data-action], [data-action="schedule-close-modal"], [data-action="resource-close-modal"]'); if(!actionTarget||!appView.contains(actionTarget))return; const action=actionTarget.dataset.action; event.stopPropagation();
   if(action==='schedule-close-modal'&&event.target.closest('.schedule-modal')&&!event.target.closest('button[data-action="schedule-close-modal"]'))return;
   if(action==='resource-close-modal'&&event.target.closest('.resource-modal')&&!event.target.closest('button[data-action="resource-close-modal"]'))return;
   if(action==='quiz-answer'){window.__scholarQuizAnswer?.(actionTarget);return;} if(action==='ai-optimize-schedule'){handlePlannerAction(actionTarget);return;} if(action==='drive-filter'){handleDriveFilter(actionTarget);return;}
@@ -139,16 +125,13 @@ appView.addEventListener('click',event=>{
   if(action?.startsWith('resource-')||/^(note|subject|material|college)-/.test(action)){const r=handleResourceAction(action,actionTarget.dataset.id,event,actionTarget);if(r==='refresh')renderCurrentRoute();return;}
   const focusResult=handleFocusAction(action,actionTarget);if(focusResult==='refresh')renderCurrentRoute();const result=handleAIAction(action,actionTarget.dataset.id,event,actionTarget)||handleToolAction(action,actionTarget.dataset.id,event);if(result==='refresh')renderCurrentRoute();
 });
-
 appView.addEventListener('submit',event=>{
   const form=event.target.closest('form[data-action]');if(!form||!appView.contains(form))return;event.preventDefault();const action=form.dataset.action;
   if(action==='material-drive-create'){handleDriveFileSubmit(form);return;}
   if(action?.startsWith('auth-')){handleAuthAction(action,form.dataset.id,event,form);return;} if(action?.startsWith('schedule-')){const r=handleScheduleAction(action,form.dataset.id,event,form);if(r==='refresh')renderCurrentRoute();return;} if(action?.startsWith('task-')){const r=handleTaskAction(action,form.dataset.id,event,form);if(r==='refresh')renderCurrentRoute();return;} if(action?.startsWith('resource-')||/^(note|subject|material|college)-(create|update)$/.test(action)){const r=handleResourceAction(action,form.dataset.id,event,form);if(r==='refresh')renderCurrentRoute();return;}
   const focusResult=handleFocusAction(action,form);if(focusResult==='refresh')renderCurrentRoute();const result=handleAIAction(action,form.dataset.id,event,form)||handleToolAction(action,form.dataset.id,event);if(result==='refresh')renderCurrentRoute();
 });
-
 function renderCurrentRoute() { const hash=location.hash.replace(/^#/,'') || 'dashboard'; navigate(hash); }
-
 applyTheme();
 updateStreak();
 initRouter();
