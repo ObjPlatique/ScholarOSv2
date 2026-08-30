@@ -9,6 +9,7 @@ let saveTimer = null;
 let saveRevision = 0;
 let unsubscribeStore = null;
 let authListenerBound = false;
+let suppressNextStoreSave = false;
 
 const cloneState = () => JSON.parse(JSON.stringify(getState()));
 const emit = (status, extra = {}) => window.dispatchEvent(new CustomEvent('scholaros:persistence', { detail: { status, ...extra } }));
@@ -22,6 +23,7 @@ function stop({ resetLocal = false } = {}) {
   saveTimer = null;
   unsubscribeStore?.();
   unsubscribeStore = null;
+  suppressNextStoreSave = false;
   if (resetLocal) resetState();
 }
 
@@ -43,6 +45,13 @@ async function persist(snapshot, revision, userId) {
 }
 
 function scheduleSave() {
+  if (suppressNextStoreSave) {
+    suppressNextStoreSave = false;
+    saveRevision += 1;
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    return;
+  }
   if (!enabled || syncing || !activeUserId) return;
   const revision = ++saveRevision;
   clearTimeout(saveTimer);
@@ -119,6 +128,19 @@ export async function initCloudPersistence() {
     emit('error', { error });
     return { signedIn: false, error };
   }
+}
+
+export function clearLocalStateAfterCloudDeletion() {
+  if (!enabled || !activeUserId) {
+    resetState();
+    return;
+  }
+  suppressNextStoreSave = true;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  saveRevision += 1;
+  resetState();
+  emit('cleared-local', { userId: activeUserId });
 }
 
 export async function flushCloudPersistence() {
