@@ -62,7 +62,7 @@ function scheduleSave() {
 
 async function bindRealtime(userId) {
   const supabase = await getSupabase();
-  realtimeChannel?.unsubscribe();
+  if (realtimeChannel) void realtimeChannel.unsubscribe();
   realtimeChannel = supabase.channel(`scholaros-user-state-${userId}`)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: CLOUD_TABLE, filter: `user_id=eq.${userId}` }, payload => {
       if (activeUserId !== userId || !payload.new?.state || !payload.new.state[RESET_MARKER]) return;
@@ -114,7 +114,7 @@ async function hydrate(user) {
     if (activeUserId !== user.id) return { signedIn: false };
     enabled = true;
     syncing = false;
-    unsubscribeStore = subscribe(scheduleSave);
+    if (!unsubscribeStore) unsubscribeStore = subscribe(scheduleSave);
     await bindRealtime(user.id);
     emit('synced', { userId: user.id, source });
     return { signedIn: true, source };
@@ -156,7 +156,7 @@ export async function initCloudPersistence() {
 }
 
 export function clearLocalStateAfterCloudDeletion() {
-  if (!enabled || !activeUserId) {
+  if (!activeUserId) {
     resetState();
     localStorage.removeItem('scholaros.v2.state');
     return;
@@ -164,15 +164,14 @@ export function clearLocalStateAfterCloudDeletion() {
   clearTimeout(saveTimer);
   saveTimer = null;
   saveRevision += 1;
-  enabled = false;
   syncing = false;
-  if (unsubscribeStore) { unsubscribeStore(); unsubscribeStore = null; }
+  enabled = true;
+  unsubscribeStore?.();
+  unsubscribeStore = null;
   resetState();
   localStorage.removeItem('scholaros.v2.state');
-  enabled = true;
+  unsubscribeStore = subscribe(scheduleSave);
   emit('cleared-local', { userId: activeUserId });
-  emit('synced', { userId: activeUserId, source: 'remote-reset' });
-  void bindRealtime(activeUserId);
 }
 
 export async function flushCloudPersistence() {
