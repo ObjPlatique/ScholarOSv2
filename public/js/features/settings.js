@@ -113,10 +113,8 @@ async function verifyEmailBeforeDestructiveAction() {
   if (!email) throw new Error('Tài khoản chưa có email để xác minh.');
   if (!userData.user.email_confirmed_at) throw new Error('Email tài khoản chưa được xác minh. Hãy xác minh email trước.');
 
-  const { error: sendError } = await supabase.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: false }
-  });
+  notify(`Đang gửi mã xác minh tới ${email}…`);
+  const { error: sendError } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
   if (sendError) throw sendError;
 
   const token = prompt(`Mã xác minh đã được gửi tới ${email}.\n\nNhập mã OTP để tiếp tục:`);
@@ -151,17 +149,11 @@ async function deleteAccount() {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || 'Không thể xóa tài khoản.');
     localStorage.clear();
-    await supabaseSignOutLocal();
+    const supabase = await getSupabase();
+    await supabase.auth.signOut({ scope: 'local' });
     window.location.hash = '#auth';
     window.location.reload();
   } catch (error) { notify(error.message || 'Không thể xóa tài khoản.'); }
-}
-
-async function supabaseSignOutLocal() {
-  try {
-    const supabase = await getSupabase();
-    await supabase.auth.signOut({ scope: 'local' });
-  } catch {}
 }
 
 function notify(message) { const toast = document.getElementById('toast'); if (!toast) return; toast.textContent = message; toast.classList.add('show'); clearTimeout(window.__toast); window.__toast = setTimeout(() => toast.classList.remove('show'), 3500); }
