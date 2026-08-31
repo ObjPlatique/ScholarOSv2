@@ -2,7 +2,7 @@ import { initRouter, navigate, registerRoute } from './core/router.js';
 import { getState, resetState, exportState, importState } from './core/store.js';
 import { applyTheme, toggleTheme } from './core/theme.js';
 import { dashboard } from './features/dashboard.js';
-import { schedule as legacySchedule, habits, goals, progress, handleToolAction } from './features/tools.js';
+import { habits, goals, progress, handleToolAction } from './features/tools.js';
 import { tasks, handleTaskAction } from './features/tasks.js';
 import { schedule, handleScheduleAction } from './features/schedule.js';
 import { focus, handleFocusAction } from './features/focus.js';
