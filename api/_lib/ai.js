@@ -47,27 +47,33 @@ export async function generate(input, config = {}) {
   const models = [...new Set([MODEL, FALLBACK_MODEL, ...KNOWN_MODELS].filter(Boolean))];
   let lastError = null;
 
+  // Keep retries bounded. A failed request should not fan out into 9 API calls.
+  // We retry transient failures once, then move to the next model immediately.
   for (const model of models) {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        return await ai.models.generateContent({
-          model,
-          contents: input,
-          config: { maxOutputTokens: 2200, ...config }
-        });
-      } catch (err) {
-        lastError = err;
-        const status = statusOf(err);
+    try {
+      return await ai.models.generateContent({
+        model,
+        contents: input,
+        config: { maxOutputTokens: 2200, ...config }
+      });
+    } catch (err) {
+      lastError = err;
+      const status = statusOf(err);
 
-        if (isRetryable(status) && attempt < 2) {
-          await sleep(700 * (attempt + 1));
-          continue;
+      if (isRetryable(status)) {
+        await sleep(400);
+        try {
+          return await ai.models.generateContent({
+            model,
+            contents: input,
+            config: { maxOutputTokens: 2200, ...config }
+          });
+        } catch (retryErr) {
+          lastError = retryErr;
         }
-
-        // 404 can mean the configured model is unavailable. Continue to the
-        // next known-good model instead of stopping the entire AI request.
-        break;
       }
+
+      // Continue to the next model for unavailable or transiently failing models.
     }
   }
 
@@ -93,6 +99,6 @@ export function aiErrorMessage(err) {
   if (status === 401 || status === 403) return { status, message: 'Gemini API key không hợp lệ hoặc không có quyền truy cập.' };
   if (status === 429) return { status, message: 'Gemini API đang giới hạn tốc độ. Hãy thử lại sau.' };
   if (status === 404) return { status, message: 'Không có model Gemini khả dụng. Kiểm tra GEMINI_MODEL/GEMINI_FALLBACK_MODEL trên Vercel.' };
-  if (status >= 500) return { status: 502, message: 'Gemini API đang gặp lỗi tạm thời. Hệ thống đã thử lại nhiều model.' };
+  if (status >= 500) return { status: 502, message: 'Gemini API đang gặp lỗi tạm thời. Hệ thống đã thử lại các model dự phòng.' };
   return { status: status >= 400 && status < 600 ? status : 500, message: err?.message || 'AI request failed.' };
 }
