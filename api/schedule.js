@@ -41,18 +41,24 @@ function plannerInstructions(mode) {
   return `An existing schedule is present. Keep fixed classes and existing sessions unchanged. Suggest only additional study blocks around them.`;
 }
 
+function compactContext(context) {
+  const pick = (item, fields) => Object.fromEntries(fields.filter(key => item?.[key] !== undefined && item?.[key] !== null && item?.[key] !== '').map(key => [key, item[key]]));
+  const tasks = Array.isArray(context.tasks) ? context.tasks.filter(t => !t.done).slice(0, 15).map(t => pick(t, ['title','name','deadline','dueDate','priority','subject','estimatedMinutes'])) : [];
+  const schedule = Array.isArray(context.schedule) ? context.schedule.slice(0, 30).map(e => pick(e, ['title','date','start','time','duration','type','recurrence'])) : [];
+  const goals = Array.isArray(context.goals) ? context.goals.slice(0, 8).map(g => pick(g, ['title','name','deadline','dueDate','priority','progress','target'])) : [];
+  const habits = Array.isArray(context.habits) ? context.habits.slice(0, 7).map(h => pick(h, ['title','name','frequency','streak'])) : [];
+  return { tasks, schedule, goals, habits, focusSessions: Number(context.focusSessions) || 0, streak: Number(context.streak) || 0 };
+}
+
 export default async function handler(req,res){
   if(req.method!=='POST') return json(res,405,{error:'Method not allowed.'});
   try {
-    const context=bodyOf(req).context||{};
+    const rawContext=bodyOf(req).context||{};
+    const context=compactContext(rawContext);
     const mode=scheduleMode(context);
-
-    // Empty context does not need Gemini. Return a deterministic starter plan
-    // immediately so a new ScholarOS installation can always create its first
-    // schedule, even when Gemini is unavailable or not configured yet.
     if (mode === 'CREATE_STARTER') return json(res,200,starterSchedule());
 
-    const contextText=JSON.stringify(context,null,2);
+    const contextText=JSON.stringify(context);
     const prompt=`${systemPrompt()}
 You are the AI Planner inside ScholarOS.
 Mode: ${mode}
